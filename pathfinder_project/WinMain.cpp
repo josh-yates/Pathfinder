@@ -4,16 +4,28 @@
 //INCLUDES
 #include <Windows.h>
 
-#define CLOSE_OPEN_BUTTON 1
+//TODO maybe have parent window size as global variable, could negate ParentWidth etc
+
+//CUSTOM MESSAGE DEFINITIONS
+#define START_SCREEN__OPEN 1
+#define START_SCREEN__NEW 2
 
 //FORWARD DECLARATIONS
 LRESULT CALLBACK window_procedure(HWND, UINT, WPARAM, LPARAM);		//message handler
+void GetWindowSize(HWND, int&, int&);
 
 void DisplayStartScreen(HWND);										//start screen, with a message and two buttons
 HWND hStartMessage;
 HWND hOpenButton;
 HWND hNewButton;
+
 void DisplayNewMapScreen(HWND);										//screen shown when new map is to be created
+HWND hNewMapInstructions;
+HWND hNewMapHeightLabel;
+HWND hNewMapHeightInput;
+HWND hNewMapWidthLabel;
+HWND hNewMapWidthInput;
+HWND hNewMapCreateButton;
 
 //MAIN PROGRAM
 int WINAPI WinMain(
@@ -67,6 +79,9 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 	case WM_COMMAND:
 		//TODO add functions here for handling messages from the buttons
 		switch (wp) {
+		case START_SCREEN__NEW:
+			DisplayNewMapScreen(hWnd);
+			break;
 		}
 		break;
 	//WINDOW CLOSURE
@@ -81,17 +96,22 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 	}
 }
 
-void DisplayStartScreen(HWND hWnd) {
-	//GET PARENT WINDOW DIMENSIONS
-	RECT ParentRect;
-	int ParentWidth, ParentHeight;
-	if (!GetWindowRect(hWnd, &ParentRect)) {
+void GetWindowSize(HWND hWnd, int& width, int& height) {
+	RECT WindowRect;
+	if (!GetWindowRect(hWnd, &WindowRect)) {
 		//break and tell user
-		MessageBox(NULL, L"Unable to access parent window size", L"Error", MB_ICONERROR);
+		MessageBox(NULL, L"Unable to access window RECT", L"Error", MB_ICONERROR);
 		return;
 	}
-	ParentWidth = ParentRect.right - ParentRect.left;
-	ParentHeight = ParentRect.bottom - ParentRect.top;
+	width = WindowRect.right - WindowRect.left;
+	height = WindowRect.bottom - WindowRect.top;
+}
+
+void DisplayStartScreen(HWND hWnd) {
+	//GET PARENT WINDOW DIMENSIONS
+	int ParentWidth{ 0 };
+	int ParentHeight{ 0 };
+	GetWindowSize(hWnd, ParentWidth, ParentHeight);
 
 	//START MESSAGE
 	int StartMessageWidth{ 180 };
@@ -107,7 +127,7 @@ void DisplayStartScreen(HWND hWnd) {
 	int OpenButtonXPos{ (ParentWidth - OpenButtonWidth) / 2 };
 	int OpenButtonYPos{ StartMessageYpos + StartMessageHeight + 10 };
 	hOpenButton = CreateWindowW(L"Button", L"Open from file", WS_VISIBLE | WS_CHILD | SS_CENTER,
-		OpenButtonXPos, OpenButtonYPos, OpenButtonWidth, OpenButtonHeight, hWnd, (HMENU)CLOSE_OPEN_BUTTON, NULL, NULL);
+		OpenButtonXPos, OpenButtonYPos, OpenButtonWidth, OpenButtonHeight, hWnd, NULL, NULL, NULL);
 
 	//NEW MAP BUTTON
 	int NewButtonWidth{ 110 };
@@ -115,7 +135,41 @@ void DisplayStartScreen(HWND hWnd) {
 	int NewButtonXPos{ (ParentWidth - NewButtonWidth) / 2 };
 	int NewButtonYPos{ OpenButtonYPos + NewButtonHeight + 10 };
 	hNewButton = CreateWindowW(L"Button", L"Create new map", WS_VISIBLE | WS_CHILD | SS_CENTER,
-		NewButtonXPos, NewButtonYPos, NewButtonWidth, NewButtonHeight, hWnd, NULL, NULL, NULL);
+		NewButtonXPos, NewButtonYPos, NewButtonWidth, NewButtonHeight, hWnd, (HMENU)START_SCREEN__NEW, NULL, NULL);
 
 	//TODO add messages for the two buttons
+}
+
+void DisplayNewMapScreen(HWND hWnd) {
+	//CLEAR THE WINDOW AND RESIZE
+	DestroyWindow(hStartMessage);
+	DestroyWindow(hOpenButton);
+	DestroyWindow(hNewButton);
+	SetWindowPos(hWnd, NULL, NULL, NULL, 400, 400, SWP_NOMOVE);		//resize the window, without moving it
+
+	//GET PARENT WINDOW DIMENSIONS
+	int ParentWidth, ParentHeight;
+	GetWindowSize(hWnd, ParentWidth, ParentHeight);
+
+	//INSTRUCTIONS
+	int InstructionsWidth{ 200 };
+	int InstructionsHeight{ 50 };
+	int InstructionsXPos{ (ParentWidth - InstructionsWidth) / 2 };
+	int InstructionsYPos{ 10 };
+	hNewMapInstructions = CreateWindowW(L"Static", L"Insert width and height\n for the new map:", WS_VISIBLE | WS_CHILD | SS_CENTER,
+		InstructionsXPos, InstructionsYPos, InstructionsWidth, InstructionsHeight, hWnd, NULL, NULL, NULL);
+
+	//WIDTH INPUT BOX AND LABEL
+	int WidthLabelWidth{ 100 };
+	int WidthLabelHeight{ 20 };
+	int WidthInputWidth{ 100 };
+	int WidthInputHeight{ 20 };
+	int WidthLabelXPos{ (ParentWidth - WidthInputWidth - WidthLabelWidth) / 2 };
+	int WidthLabelYPos{ InstructionsYPos + InstructionsHeight + 10 };
+	int WidthInputXPos{ WidthLabelXPos + WidthLabelWidth };
+	int WidthInputYpos{ WidthLabelYPos };
+	hNewMapWidthLabel = CreateWindowW(L"Static", L"Width:", WS_VISIBLE | WS_CHILD | SS_CENTER,
+		WidthLabelXPos, WidthLabelYPos, WidthLabelWidth, WidthLabelHeight, hWnd, NULL, NULL, NULL);
+	hNewMapWidthInput = CreateWindowW(L"Edit", L"10", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOVSCROLL |SS_CENTER,
+		WidthInputXPos, WidthInputYpos, WidthInputWidth, WidthInputHeight, hWnd, NULL, NULL, NULL);
 }
