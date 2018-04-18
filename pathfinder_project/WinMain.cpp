@@ -10,7 +10,9 @@
 LRESULT CALLBACK window_procedure(HWND, UINT, WPARAM, LPARAM);		//message handler
 
 void DisplayStartScreen(HWND);										//start screen, with a message and two buttons
+HWND hStartMessage;
 HWND hOpenButton;
+HWND hNewButton;
 void DisplayNewMapScreen(HWND);										//screen shown when new map is to be created
 
 //MAIN PROGRAM
@@ -65,9 +67,6 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 	case WM_COMMAND:
 		//TODO add functions here for handling messages from the buttons
 		switch (wp) {
-		case CLOSE_OPEN_BUTTON:
-			DestroyWindow(hOpenButton);
-			break;
 		}
 		break;
 	//WINDOW CLOSURE
@@ -99,8 +98,8 @@ void DisplayStartScreen(HWND hWnd) {
 	int StartMessageHeight{ 40 };
 	int StartMessageXPos{ (ParentWidth - StartMessageWidth) / 2 };
 	int StartMessageYpos{ 10 };
-	HWND hStartMessage{ CreateWindowW(L"Static",L"Welcome to Pathfinder.exe\nChoose an option:",WS_VISIBLE | WS_CHILD | SS_CENTER,
-		StartMessageXPos,StartMessageYpos,StartMessageWidth,StartMessageHeight,hWnd,NULL,NULL,NULL) };
+	hStartMessage = CreateWindowW(L"Static", L"Welcome to Pathfinder.exe\nChoose an option:", WS_VISIBLE | WS_CHILD | SS_CENTER,
+		StartMessageXPos, StartMessageYpos, StartMessageWidth, StartMessageHeight, hWnd, NULL, NULL, NULL);
 
 	//OPEN FILE BUTTON
 	int OpenButtonWidth{ 110 };
@@ -115,8 +114,8 @@ void DisplayStartScreen(HWND hWnd) {
 	int NewButtonHeight{ 30 };
 	int NewButtonXPos{ (ParentWidth - NewButtonWidth) / 2 };
 	int NewButtonYPos{ OpenButtonYPos + NewButtonHeight + 10 };
-	HWND hNewButton{ CreateWindowW(L"Button",L"Create new map",WS_VISIBLE | WS_CHILD | SS_CENTER,
-		NewButtonXPos,NewButtonYPos,NewButtonWidth,NewButtonHeight,hWnd,NULL,NULL,NULL) };
+	hNewButton = CreateWindowW(L"Button", L"Create new map", WS_VISIBLE | WS_CHILD | SS_CENTER,
+		NewButtonXPos, NewButtonYPos, NewButtonWidth, NewButtonHeight, hWnd, NULL, NULL, NULL);
 
 	//TODO add messages for the two buttons
 }
