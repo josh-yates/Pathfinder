@@ -3,6 +3,7 @@
 
 //INCLUDES
 #include <Windows.h>
+#include <vector>
 
 //TODO maybe have parent window size as global variable, could negate ParentWidth etc
 
@@ -10,9 +11,16 @@
 #define START_SCREEN__OPEN 1
 #define START_SCREEN__NEW 2
 
+//PARENT WINDOW VARIABLES
+int ParentHeight{ 200 };
+int ParentWidth{ 300 };
+std::vector<HWND*> ChildWindows;
+
+
 //FORWARD DECLARATIONS
 LRESULT CALLBACK window_procedure(HWND, UINT, WPARAM, LPARAM);		//message handler
 void GetWindowSize(HWND, int&, int&);
+void DeleteChildren();
 
 void DisplayStartScreen(HWND);										//start screen, with a message and two buttons
 HWND hStartMessage;
@@ -53,7 +61,7 @@ int WINAPI WinMain(
 		L"Pathfinder",				//window title
 		WS_SYSMENU | WS_VISIBLE,	//window display properties (non-resizeable, visible)
 		100, 100,					//x,y position of top LH corner on screen
-		300, 200,					//x,y dimensions of window
+		ParentWidth, ParentHeight,					//x,y dimensions of window
 		NULL, NULL, NULL, NULL);
 
 	//CREATE MESSAGE LOOP
@@ -107,11 +115,21 @@ void GetWindowSize(HWND hWnd, int& width, int& height) {
 	height = WindowRect.bottom - WindowRect.top;
 }
 
+void DeleteChildren() {
+	//iterate over child windows, destroying them all
+	for (auto child = ChildWindows.begin(); child != ChildWindows.end(); child++) {
+		DestroyWindow(**child);
+	}
+	//clear the vector
+	ChildWindows.clear();
+}
+
 void DisplayStartScreen(HWND hWnd) {
-	//GET PARENT WINDOW DIMENSIONS
-	int ParentWidth{ 0 };
-	int ParentHeight{ 0 };
-	GetWindowSize(hWnd, ParentWidth, ParentHeight);
+	//CLEAR CHILDREN WINDOWS SET PARENT WINDOW DIMENSIONS AND RESIZE
+	DeleteChildren();
+	ParentHeight = 200;
+	ParentWidth = 300;
+	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);
 
 	//START MESSAGE
 	int StartMessageWidth{ 180 };
@@ -138,18 +156,17 @@ void DisplayStartScreen(HWND hWnd) {
 		NewButtonXPos, NewButtonYPos, NewButtonWidth, NewButtonHeight, hWnd, (HMENU)START_SCREEN__NEW, NULL, NULL);
 
 	//TODO add messages for the two buttons
+	ChildWindows.push_back(&hStartMessage);
+	ChildWindows.push_back(&hOpenButton);
+	ChildWindows.push_back(&hNewButton);
 }
 
 void DisplayNewMapScreen(HWND hWnd) {
 	//CLEAR THE WINDOW AND RESIZE
-	DestroyWindow(hStartMessage);
-	DestroyWindow(hOpenButton);
-	DestroyWindow(hNewButton);
-	SetWindowPos(hWnd, NULL, NULL, NULL, 400, 400, SWP_NOMOVE);		//resize the window, without moving it
-
-	//GET PARENT WINDOW DIMENSIONS
-	int ParentWidth, ParentHeight;
-	GetWindowSize(hWnd, ParentWidth, ParentHeight);
+	DeleteChildren();
+	ParentHeight = 250;
+	ParentWidth = 300;
+	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);		//resize the window, without moving it
 
 	//INSTRUCTIONS
 	int InstructionsWidth{ 200 };
@@ -172,4 +189,35 @@ void DisplayNewMapScreen(HWND hWnd) {
 		WidthLabelXPos, WidthLabelYPos, WidthLabelWidth, WidthLabelHeight, hWnd, NULL, NULL, NULL);
 	hNewMapWidthInput = CreateWindowW(L"Edit", L"10", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOVSCROLL |SS_CENTER,
 		WidthInputXPos, WidthInputYpos, WidthInputWidth, WidthInputHeight, hWnd, NULL, NULL, NULL);
+
+	//HEIGHT INPUT BOX AND LABEL
+	int HeightLabelWidth{ 100 };
+	int HeightLabelHeight{ 20 };
+	int HeightInputWidth{ 100 };
+	int HeightInputHeight{ 20 };
+	int HeightLabelXPos{ (ParentWidth - HeightInputWidth - HeightLabelWidth) / 2 };
+	int HeightLabelYPos{ WidthLabelYPos + WidthLabelHeight + 10 };
+	int HeightInputXPos{ HeightLabelXPos + HeightLabelWidth };
+	int HeightInputYpos{ HeightLabelYPos };
+	hNewMapHeightLabel = CreateWindowW(L"Static", L"Height:", WS_VISIBLE | WS_CHILD | SS_CENTER,
+		HeightLabelXPos, HeightLabelYPos, HeightLabelWidth, HeightLabelHeight, hWnd, NULL, NULL, NULL);
+	hNewMapHeightInput = CreateWindowW(L"Edit", L"10", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOVSCROLL | SS_CENTER,
+		HeightInputXPos, HeightInputYpos, HeightInputWidth, HeightInputHeight, hWnd, NULL, NULL, NULL);
+
+	//CREATE BUTTON
+	int CreateButtonWidth{ 100 };
+	int CreateButtonHeight{ 30 };
+	int CreateButtonXPos{ (ParentWidth - CreateButtonWidth) / 2 };
+	int CreateButtonYPos{ HeightLabelYPos + HeightLabelHeight + 20 };
+	hNewMapCreateButton = CreateWindowW(L"Button", L"Create", WS_VISIBLE | WS_CHILD | SS_CENTER,
+		CreateButtonXPos, CreateButtonYPos, CreateButtonWidth, CreateButtonHeight, hWnd, NULL, NULL, NULL);
+
+	//TODO add message for create button
+
+	ChildWindows.push_back(&hNewMapInstructions);
+	ChildWindows.push_back(&hNewMapWidthLabel);
+	ChildWindows.push_back(&hNewMapWidthInput);
+	ChildWindows.push_back(&hNewMapHeightLabel);
+	ChildWindows.push_back(&hNewMapHeightInput);
+	ChildWindows.push_back(&hNewMapCreateButton);
 }
