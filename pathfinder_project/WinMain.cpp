@@ -1,15 +1,20 @@
 //MAIN PROGRAM FILE FOR PATHFINDER PROJECT
 
+#define NOMINMAX		//handles the clash between windows.h min/max and limits min/max
 
 //INCLUDES
 #include <Windows.h>
 #include <vector>
+#include <sstream>
+#include <limits>
+#include <cmath>
 
 //TODO maybe have parent window size as global variable, could negate ParentWidth etc
 
 //CUSTOM MESSAGE DEFINITIONS
 #define START_SCREEN__OPEN 1
 #define START_SCREEN__NEW 2
+#define NEW_MAP_SCREEN_CREATE 3
 
 //PARENT WINDOW VARIABLES
 int ParentHeight{ 200 };
@@ -21,6 +26,7 @@ std::vector<HWND*> ChildWindows;
 LRESULT CALLBACK window_procedure(HWND, UINT, WPARAM, LPARAM);		//message handler
 void GetWindowSize(HWND, int&, int&);
 void DeleteChildren();
+bool CheckTextPosInt(const wchar_t*, const int);					//for checking text input is an integer
 
 void DisplayStartScreen(HWND);										//start screen, with a message and two buttons
 HWND hStartMessage;
@@ -34,6 +40,11 @@ HWND hNewMapHeightInput;
 HWND hNewMapWidthLabel;
 HWND hNewMapWidthInput;
 HWND hNewMapCreateButton;
+
+void DisplayMapEditScreen(HWND, int, int);									//screen shown when map is being edited
+HBITMAP hMapBmp;
+HMENU hMapEditMenu;
+
 
 //MAIN PROGRAM
 int WINAPI WinMain(
@@ -90,6 +101,19 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 		case START_SCREEN__NEW:
 			DisplayNewMapScreen(hWnd);
 			break;
+		case NEW_MAP_SCREEN_CREATE:
+			//check height and width inputs
+			wchar_t height_in[100];
+			wchar_t width_in[100];
+			GetWindowTextW(hNewMapHeightInput, height_in, 100);
+			GetWindowTextW(hNewMapWidthInput, width_in, 100);
+			if (CheckTextPosInt(height_in, 4) && CheckTextPosInt(width_in, 4)) {
+				MessageBox(hWnd, L"Inputs valid", L"Yes!", MB_ICONQUESTION);
+			}
+			else {
+				MessageBox(hWnd, L"Inputs not valid", L"No!", MB_ICONERROR);
+			}
+			break;
 		}
 		break;
 	//WINDOW CLOSURE
@@ -123,6 +147,54 @@ void DeleteChildren() {
 	//clear the vector
 	ChildWindows.clear();
 }
+
+bool CheckTextPosInt(const wchar_t* input_wchar,const int min_val) {
+	//CONVERT WCHAR_T TO WSTRING
+	std::wstring input_string{ input_wchar };
+	//remove end of line and spaces with wstringstreams
+	std::wstringstream remove_eol(input_string);
+	wchar_t buff_peek;
+	while ((buff_peek = static_cast<wchar_t>(remove_eol.peek())) == L' ') {
+		remove_eol.ignore(1, L'\n');
+	}
+	//remove the end of line, if present, then put it back on
+	std::getline(remove_eol, input_string);
+	std::wstringstream input_stream(input_string + L'\n');
+	double input_double;
+	//try to put stream into the double
+	input_stream >> input_double;
+	//check if it fails, if so, clear the failbit and empty the buffer
+	if (input_stream.fail()) {
+		input_stream.clear(); input_stream.ignore(std::numeric_limits<std::streamsize>::max(), L'\n');
+		return false;
+	}
+	//else, if anything followed the number, fail
+	else if ((buff_peek = static_cast<wchar_t>(input_stream.peek())) != L'\n') {
+		input_stream.ignore(std::numeric_limits<std::streamsize>::max(), L'\n');
+		return false;
+	}
+	//else, it is a number, now check it is >= min_val & is an integer
+	else if (input_double < min_val) {
+		//use stream to output to debug
+		std::ostringstream debugstream;
+		debugstream << "Input value: " << input_double << std::endl;
+		OutputDebugStringA(debugstream.str().c_str());
+		return false;
+	}
+	else {
+		double int_part, fract_part;
+		fract_part = modf(input_double, &int_part);
+		if (fract_part == 0) {
+			//it is an integer
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+}
+
+//SCREEN FUNCTIONS
 
 void DisplayStartScreen(HWND hWnd) {
 	//CLEAR CHILDREN WINDOWS SET PARENT WINDOW DIMENSIONS AND RESIZE
@@ -210,7 +282,7 @@ void DisplayNewMapScreen(HWND hWnd) {
 	int CreateButtonXPos{ (ParentWidth - CreateButtonWidth) / 2 };
 	int CreateButtonYPos{ HeightLabelYPos + HeightLabelHeight + 20 };
 	hNewMapCreateButton = CreateWindowW(L"Button", L"Create", WS_VISIBLE | WS_CHILD | SS_CENTER,
-		CreateButtonXPos, CreateButtonYPos, CreateButtonWidth, CreateButtonHeight, hWnd, NULL, NULL, NULL);
+		CreateButtonXPos, CreateButtonYPos, CreateButtonWidth, CreateButtonHeight, hWnd, (HMENU)NEW_MAP_SCREEN_CREATE, NULL, NULL);
 
 	//TODO add message for create button
 
