@@ -8,6 +8,9 @@
 #include <sstream>
 #include <limits>
 #include <cmath>
+#include "base_map.h"
+#include "astar.h"
+#include "pixel_array.h"
 
 //TODO maybe have parent window size as global variable, could negate ParentWidth etc
 
@@ -17,25 +20,33 @@
 #define NEW_MAP_SCREEN_CREATE 3
 #define MAP_EDIT_SCREEN_EXIT 4
 #define MAP_EDIT_SCREEN_RESTART 5
+#define MAP_EDIT_SCREEN_ADD_POINTS 6
+
+//MAP RELATED VARIABLES
+const int MinMapSize{ 4 };
+const int MaxMapSize{ 200 };
+const int MaxBitmapSize{ 400 };
 
 //PARENT WINDOW VARIABLES
 int ParentHeight{ 200 };
 int ParentWidth{ 300 };
 std::vector<HWND*> ChildWindowPtrs;
 std::vector<HMENU*> MenuPtrs;
+bool MapIsShowing{ false };
 
 //FORWARD DECLARATIONS
-LRESULT CALLBACK window_procedure(HWND, UINT, WPARAM, LPARAM);		//message handler
+LRESULT CALLBACK window_procedure(HWND, UINT, WPARAM, LPARAM);			//message handler
 void GetWindowSize(HWND, int&, int&);
 void DeleteWindowContents(HWND);
-bool CheckTextPosInt(HWND, const wchar_t*, const int, const int);	//for checking text input is an integer
+bool CheckTextPosInt(HWND, const wchar_t*, const int, const int, int&);	//for checking text input is an integer
+int CalculateScale(const int, const int);
 
-void DisplayStartScreen(HWND);										//start screen, with a message and two buttons
+void DisplayStartScreen(HWND);											//start screen, with a message and two buttons
 HWND hStartMessage;
 HWND hOpenButton;
 HWND hNewButton;
 
-void DisplayNewMapScreen(HWND);										//screen shown when new map is to be created
+void DisplayNewMapScreen(HWND);											//screen shown when new map is to be created
 HWND hNewMapInstructions;
 HWND hNewMapHeightLabel;
 HWND hNewMapHeightInput;
@@ -43,9 +54,15 @@ HWND hNewMapWidthLabel;
 HWND hNewMapWidthInput;
 HWND hNewMapCreateButton;
 
-void DisplayMapEditScreen(HWND, const int, const int);				//screen shown when map is being edited
-HBITMAP hMapBmp;
+void DisplayMapEditScreen(HWND, const int, const int);					//screen shown when map is being edited
+base_map UserMap(4, 4);
 HMENU hMapEditMenu;
+bool MapEditAddingShapes{ false };
+bool MapEditAddingPoints{ false };
+bool MapEditAddingLine{ false };
+
+void DisplayUserMap(HDC, const pixel_array&, const int);				//function for displaying user map as bitmap on screen
+HWND hBitmapHolder;
 
 //MAIN PROGRAM
 int WINAPI WinMain(
@@ -102,22 +119,31 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 		case START_SCREEN__NEW:
 			DisplayNewMapScreen(hWnd);
 			break;
-		case NEW_MAP_SCREEN_CREATE:
-			//check height and width inputs
+		case NEW_MAP_SCREEN_CREATE: {
+			//check height and width inputs, and get integer values if correct
 			wchar_t height_in[100];
 			wchar_t width_in[100];
+			int height_out{ 0 };
+			int width_out{ 0 };
+			//collect input from text boxes
 			GetWindowTextW(hNewMapHeightInput, height_in, 100);
 			GetWindowTextW(hNewMapWidthInput, width_in, 100);
-			if (CheckTextPosInt(hWnd, height_in, 4, 400) && CheckTextPosInt(hWnd, width_in, 4, 400)) {
-				DisplayMapEditScreen(hWnd, 10, 10);
+			if (CheckTextPosInt(hWnd, height_in, MinMapSize, MaxMapSize, height_out) && 
+				CheckTextPosInt(hWnd, width_in, MinMapSize, MaxMapSize, width_out)) {
+				//open map editor
+				DisplayMapEditScreen(hWnd, height_out, width_out);
 			}
-			break;
+			break; 
+		}
 		case MAP_EDIT_SCREEN_EXIT:
 			//call the wm_destroy message to close the window
 			SendMessage(hWnd, WM_DESTROY, NULL, NULL);
 			break;
 		case MAP_EDIT_SCREEN_RESTART:
 			DisplayStartScreen(hWnd);
+			break;
+		case MAP_EDIT_SCREEN_ADD_POINTS:
+			MapEditAddingPoints = true;
 			break;
 		}
 		break;
@@ -126,6 +152,60 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 		PostQuitMessage(0);
 		return 0;
 		break;
+	//BITMAP PAINTING
+	case WM_PAINT: {
+		PAINTSTRUCT ps;
+		HDC hdc;
+		if (MapIsShowing) {
+			hdc = BeginPaint(hBitmapHolder, &ps);
+			pixel_array px_arr(UserMap, int_to_px_translate);
+			int Scale{ CalculateScale(UserMap.get_cols(),MaxBitmapSize) };
+			DisplayUserMap(hdc, px_arr, Scale);
+			EndPaint(hBitmapHolder, &ps);
+			hdc = BeginPaint(hWnd, &ps);
+			EndPaint(hWnd, &ps);
+		}
+		else {
+			hdc = BeginPaint(hWnd, &ps);
+			EndPaint(hWnd, &ps);
+		}
+		break; 
+	}
+	//LEFT MOUSE CLICK
+	case WM_LBUTTONDOWN: {
+		if (MapIsShowing) {
+			//store mouse position in structure
+			POINT MousePos;
+			MousePos.x = LOWORD(lp);
+			MousePos.y = HIWORD(lp);
+			/*std::wstring clickmsg{ L"click pos: " + std::to_wstring(MousePos.x) + L" , " + std::to_wstring(MousePos.y) };
+			MessageBox(NULL, clickmsg.c_str(), L"Click", MB_ICONINFORMATION | MB_DEFAULT_DESKTOP_ONLY);*/
+			//TODO add functionality to adders
+			if (MapEditAddingPoints) {
+				//calculate scale used to get to bitmap size
+				int Scale{ CalculateScale(UserMap.get_cols(),MaxBitmapSize) };
+				int MapXClick{ static_cast<int>(static_cast<double>(MousePos.x) / static_cast<double>(Scale)) };
+				int MapYClick{ static_cast<int>(static_cast<double>(MousePos.y) / static_cast<double>(Scale)) };
+				//if the clicked area is in the map
+				if (MapXClick >= 0 && MapXClick < UserMap.get_cols() && MapYClick >= 0 && MapYClick < UserMap.get_rows()) {
+					if (UserMap(MapYClick, MapXClick) == free_space) {
+						UserMap.set_coord(MapYClick, MapXClick, obstacle);
+					}
+				}
+				MapEditAddingPoints = false;
+			}
+			else if (MapEditAddingLine) {
+
+			}
+			else if (MapEditAddingShapes) {
+
+			}
+
+		}
+		//force repaint
+		InvalidateRect(hWnd, NULL, FALSE);
+		break;
+	}
 	//DEFAULT PROCEDURE
 	default:
 		return DefWindowProcW(hWnd, message, wp, lp);
@@ -145,6 +225,8 @@ void GetWindowSize(HWND hWnd, int& width, int& height) {
 }
 
 void DeleteWindowContents(HWND hWnd) {
+	//map is not showing
+	MapIsShowing = false;
 	//iterate over child windows, destroying them all
 	for (auto child = ChildWindowPtrs.begin(); child != ChildWindowPtrs.end(); child++) {
 		DestroyWindow(**child);
@@ -159,7 +241,7 @@ void DeleteWindowContents(HWND hWnd) {
 	MenuPtrs.clear();
 }
 
-bool CheckTextPosInt(HWND hWnd, const wchar_t* input_wchar,const int min_val, const int max_val) {
+bool CheckTextPosInt(HWND hWnd, const wchar_t* input_wchar,const int min_val, const int max_val, int& int_out) {
 	//CONVERT WCHAR_T TO WSTRING
 	std::wstring input_string{ input_wchar };
 	//remove end of line and spaces with wstringstreams
@@ -196,7 +278,8 @@ bool CheckTextPosInt(HWND hWnd, const wchar_t* input_wchar,const int min_val, co
 		double int_part, fract_part;
 		fract_part = modf(input_double, &int_part);
 		if (fract_part == 0) {
-			//it is an integer
+			//it is an integer, convert and pass out
+			int_out = static_cast<int>(int_part);
 			return true;
 		}
 		else {
@@ -204,6 +287,13 @@ bool CheckTextPosInt(HWND hWnd, const wchar_t* input_wchar,const int min_val, co
 			return false;
 		}
 	}
+}
+
+int CalculateScale(const int int_in, const int max_size) {
+	//TARGET - ~400px window size
+	double double_scale{ static_cast<double>(max_size) / static_cast<double>(int_in) };
+	double rounded_double{ round(double_scale) };
+	return static_cast<int>(rounded_double);
 }
 
 //SCREEN FUNCTIONS
@@ -306,12 +396,20 @@ void DisplayNewMapScreen(HWND hWnd) {
 	ChildWindowPtrs.push_back(&hNewMapCreateButton);
 }
 
-void DisplayMapEditScreen(HWND hWnd, const int bmp_rows, const int bmp_cols) {
-	//CLEAR AND RESIZE WINDOW
+void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
+	//CHOOSE WHICH TO MAKE THE LONG SIDE
+	int BmpSideSize;
+	if (MapHeight > MapWidth) {
+		BmpSideSize = MapHeight;
+	}
+	else {
+		BmpSideSize = MapWidth;
+	}
+
+	//MENUS
+
+	//CLEAR WINDOW
 	DeleteWindowContents(hWnd);
-	ParentHeight = bmp_rows*40;	//TODO change these to actually fit the bitmap
-	ParentWidth = bmp_cols*40;	//TODO come up with scaling for bmp_rows -> pixel array size
-	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);
 
 	//ADD MAIN MENU
 	hMapEditMenu = CreateMenu();
@@ -334,7 +432,7 @@ void DisplayMapEditScreen(HWND hWnd, const int bmp_rows, const int bmp_cols) {
 
 	//ADD INSERT MENU
 	HMENU hInsertMenu{ CreateMenu() };
-	AppendMenu(hInsertMenu, MF_STRING, NULL, L"Points");
+	AppendMenu(hInsertMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS, L"Points");
 	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hShapesMenu, L"Shapes");
 
 	AppendMenu(hMapEditMenu, MF_POPUP, (UINT_PTR)hInsertMenu, L"Insert");
@@ -344,4 +442,81 @@ void DisplayMapEditScreen(HWND hWnd, const int bmp_rows, const int bmp_cols) {
 
 	SetMenu(hWnd, hMapEditMenu);
 	MenuPtrs.push_back(&hMapEditMenu);
+
+	//MAP AND BITMAP - SUBWINDOW TO HOLD BITMAP
+	int Scale{ CalculateScale(BmpSideSize, MaxBitmapSize) };
+	int BitmapWidth{ BmpSideSize*Scale };
+	int BitmapHeight{ BmpSideSize*Scale };
+	int BitmapXPos{ 0 };
+	int BitmapYPos{ 0 };
+	hBitmapHolder = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER,
+		BitmapXPos, BitmapYPos, BitmapWidth, BitmapHeight, hWnd, NULL, NULL, NULL);
+	ChildWindowPtrs.push_back(&hBitmapHolder);
+
+	//RESIZE PARENT WINDOW
+	ParentHeight = BitmapHeight + 60;
+	ParentWidth = BitmapWidth + 15;
+	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);
+
+	//SET THE USER MAP AS A SQUARE & FILL TO DESIRED SIZE
+	UserMap = base_map(BmpSideSize, BmpSideSize);
+	if (MapHeight > MapWidth) {
+		//iterate over the right side of the map, filling out as walls
+		for (int i{ 0 }; i < UserMap.get_rows(); i++) {
+			for (int j{ MapWidth + 1 }; j < UserMap.get_cols(); j++) {
+				UserMap.set_coord(i, j, wall);
+			}
+		}
+	}
+	else if (MapWidth > MapHeight) {
+		//iterate over the bottom side of the map, filling out as walls
+		for (int i{ MapHeight + 1 }; i < UserMap.get_rows(); i++) {
+			for (int j{ 0 }; j < UserMap.get_cols(); j++) {
+				UserMap.set_coord(i, j, wall);
+			}
+		}
+	}
+	MapIsShowing = true;
+}
+
+void DisplayUserMap(HDC hdc, const pixel_array& px_arr, const int scale) {
+	if (scale < 1) {
+		MessageBox(NULL, L"DisplayUserMap error: scale factor <1", L"Error", MB_ICONERROR);
+		return;
+	}
+
+	//CREATE BITMAP OBJECT
+	HDC memDC = CreateCompatibleDC(NULL);
+	LONG bmpWidth = px_arr.get_cols()*scale;
+	LONG bmpHeight = px_arr.get_rows()*scale;
+	HBITMAP hBitmap = CreateCompatibleBitmap(hdc, bmpWidth, bmpHeight);
+
+	//SELECT BITMAP INTO MEMORY FOR EDITING
+	SelectObject(memDC, hBitmap);
+
+	//ITERATE OVER BITMAP, SCALING AND SETTING PIXELS
+	//px - keeps track of position in smaller px array
+	int px_i{ 0 };
+	//iterate over the bitmap, skipping the "added in" regions
+	for (int bmp_i{ 0 }; bmp_i < bmpHeight; bmp_i += scale) {
+		int px_j{ 0 };
+		for (int bmp_j{ 0 }; bmp_j < bmpWidth; bmp_j += scale) {
+			//iterate over the "added in" regions, setting the pixels to the corresponding points in px array
+			for (int row{ 0 }; row < scale; row++) {
+				for (int col{ 0 }; col < scale; col++) {
+					SetPixel(memDC, bmp_j + col, bmp_i + row, px_arr(px_i, px_j));
+				}
+			}
+			//move to the next point in the px array
+			px_j += 1;
+		}
+		px_i += 1;
+	}
+
+	//DRAW MEMORY (BITMAP) CONTENTS TO SCREEN
+	BitBlt(hdc, 0, 0, bmpWidth, bmpHeight, memDC, NULL, NULL, SRCCOPY);
+
+	//FREE MEMORY SPACE
+	DeleteObject(hBitmap);
+	DeleteObject(memDC);
 }

@@ -3,11 +3,6 @@
 
 //CONSTRUCTORS/DESTRUCTORS
 base_map::base_map(const int height, const int width) {
-	//TODO add maximum size for map
-	//must have minimum 4x4 size
-	if (height < 4 || width < 4) {
-		throw "base_map constructor:  height or width too small";
-	}
 	coordinates = std::move(array2D<map_point_type>(height, width, free_space));
 	//set the walls
 	for (int i{ 0 }; i < coordinates.get_m_rows(); i++) {
