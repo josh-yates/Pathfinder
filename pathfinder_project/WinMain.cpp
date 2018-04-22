@@ -20,7 +20,9 @@
 #define NEW_MAP_SCREEN_CREATE 3
 #define MAP_EDIT_SCREEN_EXIT 4
 #define MAP_EDIT_SCREEN_RESTART 5
-#define MAP_EDIT_SCREEN_ADD_POINTS 6
+#define MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE 6
+#define MAP_EDIT_SCREEN_ADD_POINTS_START 7
+#define MAP_EDIT_SCREEN_ADD_POINTS_END 8
 
 //MAP RELATED VARIABLES
 const int MinMapSize{ 4 };
@@ -58,7 +60,9 @@ void DisplayMapEditScreen(HWND, const int, const int);					//screen shown when m
 base_map UserMap(4, 4);
 HMENU hMapEditMenu;
 bool MapEditAddingShapes{ false };
-bool MapEditAddingPoints{ false };
+bool MapEditAddingObstacle{ false };
+bool MapEditAddingStart{ false };
+bool MapEditAddingEnd{ false };
 bool MapEditAddingLine{ false };
 
 void DisplayUserMap(HDC, const pixel_array&, const int);				//function for displaying user map as bitmap on screen
@@ -142,8 +146,30 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 		case MAP_EDIT_SCREEN_RESTART:
 			DisplayStartScreen(hWnd);
 			break;
-		case MAP_EDIT_SCREEN_ADD_POINTS:
-			MapEditAddingPoints = true;
+		case MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE:
+			MapEditAddingObstacle = true;
+			break;
+		case MAP_EDIT_SCREEN_ADD_POINTS_START:
+			//check start not already defined
+			UserMap.find_start_end();
+			if (UserMap.get_start_i() < 0 && UserMap.get_start_j() < 0) {
+				MapEditAddingStart = true;
+			}
+			else {
+				MessageBox(hBitmapHolder, L"Start point already defined", L"Warning", MB_ICONWARNING);
+				MapEditAddingStart = false;
+			}
+			break;
+		case MAP_EDIT_SCREEN_ADD_POINTS_END:
+			//check end not already defined
+			UserMap.find_start_end();
+			if (UserMap.get_end_i() < 0 && UserMap.get_end_j() < 0) {
+				MapEditAddingEnd = true;
+			}
+			else {
+				MessageBox(hBitmapHolder, L"End point already defined", L"Warning", MB_ICONWARNING);
+				MapEditAddingEnd = false;
+			}
 			break;
 		}
 		break;
@@ -181,18 +207,30 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 			/*std::wstring clickmsg{ L"click pos: " + std::to_wstring(MousePos.x) + L" , " + std::to_wstring(MousePos.y) };
 			MessageBox(NULL, clickmsg.c_str(), L"Click", MB_ICONINFORMATION | MB_DEFAULT_DESKTOP_ONLY);*/
 			//TODO add functionality to adders
-			if (MapEditAddingPoints) {
+			if (MapEditAddingObstacle || MapEditAddingEnd || MapEditAddingStart) {
 				//calculate scale used to get to bitmap size
 				int Scale{ CalculateScale(UserMap.get_cols(),MaxBitmapSize) };
 				int MapXClick{ static_cast<int>(static_cast<double>(MousePos.x) / static_cast<double>(Scale)) };
 				int MapYClick{ static_cast<int>(static_cast<double>(MousePos.y) / static_cast<double>(Scale)) };
-				//if the clicked area is in the map
+				//if the clicked area is in the map, add the corresponding point type
+				map_point_type point_to_add{ free_space };
+				if (MapEditAddingObstacle) {
+					point_to_add = obstacle;
+				}
+				else if (MapEditAddingEnd) {
+					point_to_add = end_point;
+				}
+				else if (MapEditAddingStart) {
+					point_to_add = start_point;
+				}
 				if (MapXClick >= 0 && MapXClick < UserMap.get_cols() && MapYClick >= 0 && MapYClick < UserMap.get_rows()) {
 					if (UserMap(MapYClick, MapXClick) == free_space) {
-						UserMap.set_coord(MapYClick, MapXClick, obstacle);
+						UserMap.set_coord(MapYClick, MapXClick, point_to_add);
 					}
 				}
-				MapEditAddingPoints = false;
+				MapEditAddingObstacle = false;
+				MapEditAddingEnd = false;
+				MapEditAddingStart = false;
 			}
 			else if (MapEditAddingLine) {
 
@@ -225,8 +263,13 @@ void GetWindowSize(HWND hWnd, int& width, int& height) {
 }
 
 void DeleteWindowContents(HWND hWnd) {
-	//map is not showing
+	//map is not showing, don't allow "carry over" of obstacle input info
 	MapIsShowing = false;
+	MapEditAddingLine = false;
+	MapEditAddingObstacle = false;
+	MapEditAddingShapes = false;
+	MapEditAddingStart = false;
+	MapEditAddingEnd = false;
 	//iterate over child windows, destroying them all
 	for (auto child = ChildWindowPtrs.begin(); child != ChildWindowPtrs.end(); child++) {
 		DestroyWindow(**child);
@@ -430,9 +473,15 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
 	AppendMenu(hShapesMenu, MF_STRING, NULL, L"Rectangle");
 	AppendMenu(hShapesMenu, MF_STRING, NULL, L"Circle");
 
+	//ADD POINTS MENU
+	HMENU hPointsMenu{ CreateMenu() };
+	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS_START, L"Start");
+	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS_END, L"End");
+	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE, L"Obstacle");
+
 	//ADD INSERT MENU
 	HMENU hInsertMenu{ CreateMenu() };
-	AppendMenu(hInsertMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS, L"Points");
+	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hPointsMenu, L"Points");
 	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hShapesMenu, L"Shapes");
 
 	AppendMenu(hMapEditMenu, MF_POPUP, (UINT_PTR)hInsertMenu, L"Insert");
