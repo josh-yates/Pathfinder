@@ -15,18 +15,20 @@
 #define START_SCREEN__OPEN 1
 #define START_SCREEN__NEW 2
 #define NEW_MAP_SCREEN_CREATE 3
+#define MAP_EDIT_SCREEN_EXIT 4
+#define MAP_EDIT_SCREEN_RESTART 5
 
 //PARENT WINDOW VARIABLES
 int ParentHeight{ 200 };
 int ParentWidth{ 300 };
-std::vector<HWND*> ChildWindows;
-
+std::vector<HWND*> ChildWindowPtrs;
+std::vector<HMENU*> MenuPtrs;
 
 //FORWARD DECLARATIONS
 LRESULT CALLBACK window_procedure(HWND, UINT, WPARAM, LPARAM);		//message handler
 void GetWindowSize(HWND, int&, int&);
-void DeleteChildren();
-bool CheckTextPosInt(const wchar_t*, const int);					//for checking text input is an integer
+void DeleteWindowContents(HWND);
+bool CheckTextPosInt(HWND, const wchar_t*, const int, const int);	//for checking text input is an integer
 
 void DisplayStartScreen(HWND);										//start screen, with a message and two buttons
 HWND hStartMessage;
@@ -41,10 +43,9 @@ HWND hNewMapWidthLabel;
 HWND hNewMapWidthInput;
 HWND hNewMapCreateButton;
 
-void DisplayMapEditScreen(HWND, int, int);									//screen shown when map is being edited
+void DisplayMapEditScreen(HWND, const int, const int);				//screen shown when map is being edited
 HBITMAP hMapBmp;
 HMENU hMapEditMenu;
-
 
 //MAIN PROGRAM
 int WINAPI WinMain(
@@ -107,12 +108,16 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 			wchar_t width_in[100];
 			GetWindowTextW(hNewMapHeightInput, height_in, 100);
 			GetWindowTextW(hNewMapWidthInput, width_in, 100);
-			if (CheckTextPosInt(height_in, 4) && CheckTextPosInt(width_in, 4)) {
-				MessageBox(hWnd, L"Inputs valid", L"Yes!", MB_ICONQUESTION);
+			if (CheckTextPosInt(hWnd, height_in, 4, 400) && CheckTextPosInt(hWnd, width_in, 4, 400)) {
+				DisplayMapEditScreen(hWnd, 10, 10);
 			}
-			else {
-				MessageBox(hWnd, L"Inputs not valid", L"No!", MB_ICONERROR);
-			}
+			break;
+		case MAP_EDIT_SCREEN_EXIT:
+			//call the wm_destroy message to close the window
+			SendMessage(hWnd, WM_DESTROY, NULL, NULL);
+			break;
+		case MAP_EDIT_SCREEN_RESTART:
+			DisplayStartScreen(hWnd);
 			break;
 		}
 		break;
@@ -139,16 +144,22 @@ void GetWindowSize(HWND hWnd, int& width, int& height) {
 	height = WindowRect.bottom - WindowRect.top;
 }
 
-void DeleteChildren() {
+void DeleteWindowContents(HWND hWnd) {
 	//iterate over child windows, destroying them all
-	for (auto child = ChildWindows.begin(); child != ChildWindows.end(); child++) {
+	for (auto child = ChildWindowPtrs.begin(); child != ChildWindowPtrs.end(); child++) {
 		DestroyWindow(**child);
 	}
 	//clear the vector
-	ChildWindows.clear();
+	ChildWindowPtrs.clear();
+	//clear the menus
+	SetMenu(hWnd, NULL);
+	for (auto menu = MenuPtrs.begin(); menu != MenuPtrs.end(); menu++) {
+		DestroyMenu(**menu);
+	}
+	MenuPtrs.clear();
 }
 
-bool CheckTextPosInt(const wchar_t* input_wchar,const int min_val) {
+bool CheckTextPosInt(HWND hWnd, const wchar_t* input_wchar,const int min_val, const int max_val) {
 	//CONVERT WCHAR_T TO WSTRING
 	std::wstring input_string{ input_wchar };
 	//remove end of line and spaces with wstringstreams
@@ -166,19 +177,19 @@ bool CheckTextPosInt(const wchar_t* input_wchar,const int min_val) {
 	//check if it fails, if so, clear the failbit and empty the buffer
 	if (input_stream.fail()) {
 		input_stream.clear(); input_stream.ignore(std::numeric_limits<std::streamsize>::max(), L'\n');
+		MessageBox(hWnd, L"Inputs must be integer numbers", L"Invalid input", MB_ICONERROR);
 		return false;
 	}
 	//else, if anything followed the number, fail
 	else if ((buff_peek = static_cast<wchar_t>(input_stream.peek())) != L'\n') {
 		input_stream.ignore(std::numeric_limits<std::streamsize>::max(), L'\n');
+		MessageBox(hWnd, L"Inputs must be integer numbers", L"Invalid input", MB_ICONERROR);
 		return false;
 	}
 	//else, it is a number, now check it is >= min_val & is an integer
-	else if (input_double < min_val) {
-		//use stream to output to debug
-		std::ostringstream debugstream;
-		debugstream << "Input value: " << input_double << std::endl;
-		OutputDebugStringA(debugstream.str().c_str());
+	else if (input_double < min_val || input_double>max_val) {
+		std::wstring range_msg{ L"Inputs must be in range " + std::to_wstring(min_val) + L" to " + std::to_wstring(max_val) };
+		MessageBox(hWnd, range_msg.c_str(), L"Invalid input", MB_ICONERROR);
 		return false;
 	}
 	else {
@@ -189,6 +200,7 @@ bool CheckTextPosInt(const wchar_t* input_wchar,const int min_val) {
 			return true;
 		}
 		else {
+			MessageBox(hWnd, L"Inputs must be integer numbers", L"Invalid input", MB_ICONERROR);
 			return false;
 		}
 	}
@@ -198,7 +210,7 @@ bool CheckTextPosInt(const wchar_t* input_wchar,const int min_val) {
 
 void DisplayStartScreen(HWND hWnd) {
 	//CLEAR CHILDREN WINDOWS SET PARENT WINDOW DIMENSIONS AND RESIZE
-	DeleteChildren();
+	DeleteWindowContents(hWnd);
 	ParentHeight = 200;
 	ParentWidth = 300;
 	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);
@@ -228,14 +240,14 @@ void DisplayStartScreen(HWND hWnd) {
 		NewButtonXPos, NewButtonYPos, NewButtonWidth, NewButtonHeight, hWnd, (HMENU)START_SCREEN__NEW, NULL, NULL);
 
 	//TODO add messages for the two buttons
-	ChildWindows.push_back(&hStartMessage);
-	ChildWindows.push_back(&hOpenButton);
-	ChildWindows.push_back(&hNewButton);
+	ChildWindowPtrs.push_back(&hStartMessage);
+	ChildWindowPtrs.push_back(&hOpenButton);
+	ChildWindowPtrs.push_back(&hNewButton);
 }
 
 void DisplayNewMapScreen(HWND hWnd) {
 	//CLEAR THE WINDOW AND RESIZE
-	DeleteChildren();
+	DeleteWindowContents(hWnd);
 	ParentHeight = 250;
 	ParentWidth = 300;
 	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);		//resize the window, without moving it
@@ -286,10 +298,50 @@ void DisplayNewMapScreen(HWND hWnd) {
 
 	//TODO add message for create button
 
-	ChildWindows.push_back(&hNewMapInstructions);
-	ChildWindows.push_back(&hNewMapWidthLabel);
-	ChildWindows.push_back(&hNewMapWidthInput);
-	ChildWindows.push_back(&hNewMapHeightLabel);
-	ChildWindows.push_back(&hNewMapHeightInput);
-	ChildWindows.push_back(&hNewMapCreateButton);
+	ChildWindowPtrs.push_back(&hNewMapInstructions);
+	ChildWindowPtrs.push_back(&hNewMapWidthLabel);
+	ChildWindowPtrs.push_back(&hNewMapWidthInput);
+	ChildWindowPtrs.push_back(&hNewMapHeightLabel);
+	ChildWindowPtrs.push_back(&hNewMapHeightInput);
+	ChildWindowPtrs.push_back(&hNewMapCreateButton);
+}
+
+void DisplayMapEditScreen(HWND hWnd, const int bmp_rows, const int bmp_cols) {
+	//CLEAR AND RESIZE WINDOW
+	DeleteWindowContents(hWnd);
+	ParentHeight = bmp_rows*40;	//TODO change these to actually fit the bitmap
+	ParentWidth = bmp_cols*40;	//TODO come up with scaling for bmp_rows -> pixel array size
+	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);
+
+	//ADD MAIN MENU
+	hMapEditMenu = CreateMenu();
+
+	//ADD FILE MENU
+	//TODO add messages for menu buttons
+	HMENU hFileMenu{ CreateMenu() };
+	AppendMenu(hFileMenu, MF_STRING, MAP_EDIT_SCREEN_RESTART, L"Restart");
+	AppendMenu(hFileMenu, MF_STRING, NULL, L"Save Map");
+	AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);
+	AppendMenu(hFileMenu, MF_STRING, MAP_EDIT_SCREEN_EXIT, L"Exit");
+
+	AppendMenu(hMapEditMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"File");
+
+	//ADD SHAPES MENU
+	HMENU hShapesMenu{ CreateMenu() };
+	AppendMenu(hShapesMenu, MF_STRING, NULL, L"Line");
+	AppendMenu(hShapesMenu, MF_STRING, NULL, L"Rectangle");
+	AppendMenu(hShapesMenu, MF_STRING, NULL, L"Circle");
+
+	//ADD INSERT MENU
+	HMENU hInsertMenu{ CreateMenu() };
+	AppendMenu(hInsertMenu, MF_STRING, NULL, L"Points");
+	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hShapesMenu, L"Shapes");
+
+	AppendMenu(hMapEditMenu, MF_POPUP, (UINT_PTR)hInsertMenu, L"Insert");
+
+	//ADD HELP MENU
+	AppendMenu(hMapEditMenu, MF_STRING, NULL, L"Help");
+
+	SetMenu(hWnd, hMapEditMenu);
+	MenuPtrs.push_back(&hMapEditMenu);
 }

@@ -146,7 +146,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="astar.cpp" />
+    <ClCompile Include="base_map.cpp" />
+    <ClCompile Include="generic_map_item.cpp" />
+    <ClCompile Include="pixel_array.cpp" />
     <ClCompile Include="WinMain.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="array2D.h" />
+    <ClInclude Include="astar.h" />
+    <ClInclude Include="base_map.h" />
+    <ClInclude Include="generic_map_item.h" />
+    <ClInclude Include="map_definitions.h" />
+    <ClInclude Include="pixel_array.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
