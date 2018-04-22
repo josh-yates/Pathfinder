@@ -23,11 +23,12 @@
 #define MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE 6
 #define MAP_EDIT_SCREEN_ADD_POINTS_START 7
 #define MAP_EDIT_SCREEN_ADD_POINTS_END 8
+#define MAP_EDIT_RUN_ALGORITHM 9
 
 //MAP RELATED VARIABLES
 const int MinMapSize{ 4 };
-const int MaxMapSize{ 200 };
-const int MaxBitmapSize{ 400 };
+const int MaxMapSize{ 50 };
+const int MaxBitmapSize{ 500 };
 
 //PARENT WINDOW VARIABLES
 int ParentHeight{ 200 };
@@ -35,6 +36,7 @@ int ParentWidth{ 300 };
 std::vector<HWND*> ChildWindowPtrs;
 std::vector<HMENU*> MenuPtrs;
 bool MapIsShowing{ false };
+bool AlgorithmRun{ false };
 
 //FORWARD DECLARATIONS
 LRESULT CALLBACK window_procedure(HWND, UINT, WPARAM, LPARAM);			//message handler
@@ -147,13 +149,23 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 			DisplayStartScreen(hWnd);
 			break;
 		case MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE:
-			MapEditAddingObstacle = true;
+			if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingObstacle = false;
+			}
+			else {
+				MapEditAddingObstacle = true;
+			}
 			break;
 		case MAP_EDIT_SCREEN_ADD_POINTS_START:
 			//check start not already defined
 			UserMap.find_start_end();
 			if (UserMap.get_start_i() < 0 && UserMap.get_start_j() < 0) {
 				MapEditAddingStart = true;
+			}
+			else if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingStart = false;
 			}
 			else {
 				MessageBox(hBitmapHolder, L"Start point already defined", L"Warning", MB_ICONWARNING);
@@ -166,11 +178,43 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 			if (UserMap.get_end_i() < 0 && UserMap.get_end_j() < 0) {
 				MapEditAddingEnd = true;
 			}
+			else if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingEnd = false;
+			}
 			else {
 				MessageBox(hBitmapHolder, L"End point already defined", L"Warning", MB_ICONWARNING);
 				MapEditAddingEnd = false;
 			}
 			break;
+		case MAP_EDIT_RUN_ALGORITHM: {
+			//check if start/end not defined
+			UserMap.find_start_end();
+			if (UserMap.get_start_i() < 0 || UserMap.get_start_j() < 0) {
+				MessageBox(hBitmapHolder, L"Start point not defined", L"Warning", MB_ICONWARNING);
+			}
+			else if (UserMap.get_end_i() < 0 || UserMap.get_end_j() < 0) {
+				MessageBox(hBitmapHolder, L"End point not defined", L"Warning", MB_ICONWARNING);
+			}
+			else if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+			}
+			else {
+				//else, run the algorithm and update the map with the path coordinates
+				astar run_algo(UserMap);
+				std::vector<std::vector<int>> path_coords{ run_algo.find_path() };
+				if (path_coords.size() == 0) {
+					MessageBox(hBitmapHolder, L"No path found :(", L"Algorithm result", MB_ICONINFORMATION);
+				}
+				for (auto coord = path_coords.begin(); coord != path_coords.end(); coord++) {
+					if (UserMap(coord->at(0), coord->at(1)) != start_point && UserMap(coord->at(0), coord->at(1)) != end_point) {
+						UserMap.set_coord(coord->at(0), coord->at(1), path);
+					}
+				}
+				AlgorithmRun = true;
+			}
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
 		}
 		break;
 	//WINDOW CLOSURE
@@ -199,7 +243,7 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 	}
 	//LEFT MOUSE CLICK
 	case WM_LBUTTONDOWN: {
-		if (MapIsShowing) {
+		if (MapIsShowing && !AlgorithmRun) {
 			//store mouse position in structure
 			POINT MousePos;
 			MousePos.x = LOWORD(lp);
@@ -270,6 +314,7 @@ void DeleteWindowContents(HWND hWnd) {
 	MapEditAddingShapes = false;
 	MapEditAddingStart = false;
 	MapEditAddingEnd = false;
+	AlgorithmRun = false;
 	//iterate over child windows, destroying them all
 	for (auto child = ChildWindowPtrs.begin(); child != ChildWindowPtrs.end(); child++) {
 		DestroyWindow(**child);
@@ -485,6 +530,9 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
 	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hShapesMenu, L"Shapes");
 
 	AppendMenu(hMapEditMenu, MF_POPUP, (UINT_PTR)hInsertMenu, L"Insert");
+
+	//ADD RUN MENU FOR ALGORITHM
+	AppendMenu(hMapEditMenu, MF_STRING, MAP_EDIT_RUN_ALGORITHM, L"Run");
 
 	//ADD HELP MENU
 	AppendMenu(hMapEditMenu, MF_STRING, NULL, L"Help");
