@@ -1,9 +1,19 @@
 //definitions for base_map class
 #include "base_map.h"
 
+/*
+SHAPES
+Small square - 2x2
+Big square - 4x4
+L-shape - 3(h)x2(w)
+y=x mirrored L - 2(h)x3(w)
+H line 1x5
+V line 5x1
+*/
+
 //CONSTRUCTORS/DESTRUCTORS
 base_map::base_map(const int height, const int width) {
-	coordinates = std::move(array2D<map_point_type>(height, width, free_space));
+	coordinates = std::move(array2D<map_point_type>(height + 2, width + 2, free_space));
 	//set the walls
 	for (int i{ 0 }; i < coordinates.get_m_rows(); i++) {
 		coordinates.set_element(i, 0, wall);

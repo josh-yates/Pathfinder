@@ -44,6 +44,7 @@ void GetWindowSize(HWND, int&, int&);
 void DeleteWindowContents(HWND);
 bool CheckTextPosInt(HWND, const wchar_t*, const int, const int, int&);	//for checking text input is an integer
 int CalculateScale(const int, const int);
+void FalseAllMapEdits();
 
 void DisplayStartScreen(HWND);											//start screen, with a message and two buttons
 HWND hStartMessage;
@@ -153,7 +154,12 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
 				MapEditAddingObstacle = false;
 			}
-			else {
+			//toggle the obstacle adding
+			else if (MapEditAddingObstacle) {
+				FalseAllMapEdits();
+			}
+			else if (!MapEditAddingObstacle) {
+				FalseAllMapEdits();
 				MapEditAddingObstacle = true;
 			}
 			break;
@@ -161,13 +167,16 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 			//check start not already defined
 			UserMap.find_start_end();
 			if (UserMap.get_start_i() < 0 && UserMap.get_start_j() < 0) {
+				FalseAllMapEdits();
 				MapEditAddingStart = true;
 			}
 			else if (AlgorithmRun) {
+				FalseAllMapEdits();
 				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
 				MapEditAddingStart = false;
 			}
 			else {
+				FalseAllMapEdits();
 				MessageBox(hBitmapHolder, L"Start point already defined", L"Warning", MB_ICONWARNING);
 				MapEditAddingStart = false;
 			}
@@ -176,18 +185,22 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 			//check end not already defined
 			UserMap.find_start_end();
 			if (UserMap.get_end_i() < 0 && UserMap.get_end_j() < 0) {
+				FalseAllMapEdits();
 				MapEditAddingEnd = true;
 			}
 			else if (AlgorithmRun) {
+				FalseAllMapEdits();
 				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
 				MapEditAddingEnd = false;
 			}
 			else {
+				FalseAllMapEdits();
 				MessageBox(hBitmapHolder, L"End point already defined", L"Warning", MB_ICONWARNING);
 				MapEditAddingEnd = false;
 			}
 			break;
 		case MAP_EDIT_RUN_ALGORITHM: {
+			FalseAllMapEdits();
 			//check if start/end not defined
 			UserMap.find_start_end();
 			if (UserMap.get_start_i() < 0 || UserMap.get_start_j() < 0) {
@@ -259,12 +272,16 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 				//if the clicked area is in the map, add the corresponding point type
 				map_point_type point_to_add{ free_space };
 				if (MapEditAddingObstacle) {
+					FalseAllMapEdits();
+					MapEditAddingObstacle = true;
 					point_to_add = obstacle;
 				}
 				else if (MapEditAddingEnd) {
+					FalseAllMapEdits();
 					point_to_add = end_point;
 				}
 				else if (MapEditAddingStart) {
+					FalseAllMapEdits();
 					point_to_add = start_point;
 				}
 				if (MapXClick >= 0 && MapXClick < UserMap.get_cols() && MapYClick >= 0 && MapYClick < UserMap.get_rows()) {
@@ -272,9 +289,6 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 						UserMap.set_coord(MapYClick, MapXClick, point_to_add);
 					}
 				}
-				MapEditAddingObstacle = false;
-				MapEditAddingEnd = false;
-				MapEditAddingStart = false;
 			}
 			else if (MapEditAddingLine) {
 
@@ -309,11 +323,7 @@ void GetWindowSize(HWND hWnd, int& width, int& height) {
 void DeleteWindowContents(HWND hWnd) {
 	//map is not showing, don't allow "carry over" of obstacle input info
 	MapIsShowing = false;
-	MapEditAddingLine = false;
-	MapEditAddingObstacle = false;
-	MapEditAddingShapes = false;
-	MapEditAddingStart = false;
-	MapEditAddingEnd = false;
+	FalseAllMapEdits();
 	AlgorithmRun = false;
 	//iterate over child windows, destroying them all
 	for (auto child = ChildWindowPtrs.begin(); child != ChildWindowPtrs.end(); child++) {
@@ -327,6 +337,15 @@ void DeleteWindowContents(HWND hWnd) {
 		DestroyMenu(**menu);
 	}
 	MenuPtrs.clear();
+}
+
+void FalseAllMapEdits() {
+	//set all map editing trackers to false
+	MapEditAddingLine = false;
+	MapEditAddingObstacle = false;
+	MapEditAddingShapes = false;
+	MapEditAddingStart = false;
+	MapEditAddingEnd = false;
 }
 
 bool CheckTextPosInt(HWND hWnd, const wchar_t* input_wchar,const int min_val, const int max_val, int& int_out) {
