@@ -31,7 +31,7 @@
 #define MAP_EDIT_SCREEN_ADD_BIG_SQUARE 13
 #define	MAP_EDIT_SCREEN_ADD_V_LINE 14
 #define MAP_EDIT_SCREEN_ADD_H_LINE 15
-#define MAP_EDIT_SCREEN_HELP 16
+#define SHOW_HELP_PAGE 16
 
 //MAP RELATED VARIABLES
 const int MinMapSize{ 2 };
@@ -59,6 +59,7 @@ void DisplayStartScreen(HWND);											//start screen, with a message and two 
 HWND hStartMessage;
 HWND hOpenButton;
 HWND hNewButton;
+HWND hHelpButton;
 
 void DisplayNewMapScreen(HWND);											//screen shown when new map is to be created
 HWND hNewMapInstructions;
@@ -136,8 +137,16 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 		break;
 	//COMMANDS FROM ITEMS IN WINDOW
 	case WM_COMMAND:
-		//TODO add functions here for handling messages from the buttons
 		switch (wp) {
+
+		//HELP MESSAGE
+
+		case SHOW_HELP_PAGE:
+			ShowHelpDialog(hWnd);
+			break;
+
+		//START SCREEN MESSAGES
+
 		case START_SCREEN__NEW:
 			DisplayNewMapScreen(hWnd);
 			break;
@@ -159,15 +168,13 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 		}
 
 		//MAP EDIT FILE (ETC) MESSAGES
+
 		case MAP_EDIT_SCREEN_EXIT:
 			//call the wm_destroy message to close the window
 			SendMessage(hWnd, WM_DESTROY, NULL, NULL);
 			break;
 		case MAP_EDIT_SCREEN_RESTART:
 			DisplayStartScreen(hWnd);
-			break;
-		case MAP_EDIT_SCREEN_HELP:
-			ShowHelpDialog(hWnd);
 			break;
 
 		//POINTS MESSAGES
@@ -567,7 +574,7 @@ void ShowHelpDialog(HWND hWnd) {
 	HelpStream << L"START SCREEN:" << std::endl;
 	HelpStream << L"You can load a map from a file for editing, or create a new map on the new map screen. "
 		<< L"If the loaded map is already solved, the route will be cleared" << std::endl << std::endl;
-	HelpStream << L"NEW MAP SCREEN:" << std::endl;
+	HelpStream << L"CREATE NEW MAP SCREEN:" << std::endl;
 	HelpStream << L"You can enter the width and height values for the map, between " << MinMapSize << L" and " << MaxMapSize << L" tiles."
 		<< L" Walls are automatically added outside the map space. If the width and height are not equal, the map edge size is the bigger of the two"
 		<< L" and walls are added to reach the desired dimensions." << std::endl << std::endl;
@@ -586,7 +593,7 @@ void ShowHelpDialog(HWND hWnd) {
 void DisplayStartScreen(HWND hWnd) {
 	//CLEAR CHILDREN WINDOWS SET PARENT WINDOW DIMENSIONS AND RESIZE
 	DeleteWindowContents(hWnd);
-	ParentHeight = 200;
+	ParentHeight = 250;
 	ParentWidth = 300;
 	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);
 
@@ -598,26 +605,39 @@ void DisplayStartScreen(HWND hWnd) {
 	hStartMessage = CreateWindowW(L"Static", L"Welcome to Pathfinder.exe\nChoose an option:", WS_VISIBLE | WS_CHILD | SS_CENTER,
 		StartMessageXPos, StartMessageYpos, StartMessageWidth, StartMessageHeight, hWnd, NULL, NULL, NULL);
 
+	//GENERAL BUTTON DIMENSIONS
+	int ButtonWidth{ 110 };
+	int ButtonHeight{ 30 };
+
 	//OPEN FILE BUTTON
-	int OpenButtonWidth{ 110 };
-	int OpenButtonHeight{ 30 };
+	int OpenButtonWidth{ ButtonWidth };
+	int OpenButtonHeight{ ButtonHeight };
 	int OpenButtonXPos{ (ParentWidth - OpenButtonWidth) / 2 };
 	int OpenButtonYPos{ StartMessageYpos + StartMessageHeight + 10 };
 	hOpenButton = CreateWindowW(L"Button", L"Open from file", WS_VISIBLE | WS_CHILD | SS_CENTER,
 		OpenButtonXPos, OpenButtonYPos, OpenButtonWidth, OpenButtonHeight, hWnd, NULL, NULL, NULL);
 
 	//NEW MAP BUTTON
-	int NewButtonWidth{ 110 };
-	int NewButtonHeight{ 30 };
+	int NewButtonWidth{ ButtonWidth };
+	int NewButtonHeight{ ButtonHeight };
 	int NewButtonXPos{ (ParentWidth - NewButtonWidth) / 2 };
-	int NewButtonYPos{ OpenButtonYPos + NewButtonHeight + 10 };
+	int NewButtonYPos{ OpenButtonYPos + OpenButtonHeight + 10 };
 	hNewButton = CreateWindowW(L"Button", L"Create new map", WS_VISIBLE | WS_CHILD | SS_CENTER,
 		NewButtonXPos, NewButtonYPos, NewButtonWidth, NewButtonHeight, hWnd, (HMENU)START_SCREEN__NEW, NULL, NULL);
+
+	//HELP BUTTON
+	int HelpButtonWidth{ ButtonWidth };
+	int HelpButtonHeight{ ButtonHeight };
+	int HelpButtonXPos{ (ParentWidth - HelpButtonWidth) / 2 };
+	int HelpButtonYPos{ NewButtonYPos + NewButtonHeight + 10 };
+	hHelpButton = CreateWindowW(L"Button", L"Instructions", WS_VISIBLE | WS_CHILD | SS_CENTER,
+		HelpButtonXPos, HelpButtonYPos, HelpButtonWidth, HelpButtonHeight, hWnd, (HMENU)SHOW_HELP_PAGE, NULL, NULL);
 
 	//TODO add messages for the two buttons
 	ChildWindowPtrs.push_back(&hStartMessage);
 	ChildWindowPtrs.push_back(&hOpenButton);
 	ChildWindowPtrs.push_back(&hNewButton);
+	ChildWindowPtrs.push_back(&hHelpButton);
 }
 
 void DisplayNewMapScreen(HWND hWnd) {
@@ -739,7 +759,7 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
 	AppendMenu(hMapEditMenu, MF_STRING, MAP_EDIT_RUN_ALGORITHM, L"Run");
 
 	//ADD HELP MENU
-	AppendMenu(hMapEditMenu, MF_STRING, MAP_EDIT_SCREEN_HELP, L"Help");
+	AppendMenu(hMapEditMenu, MF_STRING, SHOW_HELP_PAGE, L"Help");
 
 	SetMenu(hWnd, hMapEditMenu);
 	MenuPtrs.push_back(&hMapEditMenu);
