@@ -4,6 +4,7 @@
 
 //INCLUDES
 #include <Windows.h>
+#include <iostream>
 #include <fstream>
 #include <vector>
 #include <sstream>
@@ -37,6 +38,7 @@
 #define FILE_WINDOW_SAVE 18
 #define FILE_WINDOW_CANCEL 19
 #define MAP_EDIT_SCREEN_SAVE 20
+#define MAP_OPENED_FROM_FILE 21
 
 //MAP RELATED VARIABLES
 const int MinMapSize{ 2 };
@@ -45,7 +47,7 @@ const int MaxBitmapSize{ 500 };
 
 //WINDOW HANDLES
 HWND hParentWindow;
-HWND hFileWindow;
+base_map UserMap(4, 4);
 
 //PARENT WINDOW VARIABLES
 int ParentHeight{ 200 };
@@ -63,8 +65,29 @@ bool CheckTextPosInt(HWND, const wchar_t*, const int, const int, int&);	//for ch
 int CalculateScale(const int, const int);
 void FalseAllMapEdits();
 void ShowHelpDialog(HWND);
+bool SaveMapToFile(HWND, base_map&, std::wstring);
+bool OpenMapFromFile(HWND, base_map&, std::wstring);
+
+
+void DisplayMapEditScreen(HWND, const int, const int, const bool);		//screen shown when map is being edited
+HMENU hMapEditMenu;
+HWND hBitmapHolder;
+HWND hStatusBar;
+bool MapEditAddingFreeSpace{ false };
+bool MapEditAddingObstacle{ false };
+bool MapEditAddingStart{ false };
+bool MapEditAddingEnd{ false };
+bool MapEditAddingL_Shape{ false };
+bool MapEditAddingSmallSquare{ false };
+bool MapEditAddingBigSquare{ false };
+bool MapEditAddingVLine{ false };
+bool MapEditAddingHLine{ false };
 
 //BEGIN FILE DIALOG TEST
+
+//DIALOG WINDOW HANDLES
+HWND hFileWindow;
+HWND hFilePathInput;
 
 LRESULT CALLBACK FileWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp) {
 	switch (message) {
@@ -74,16 +97,38 @@ LRESULT CALLBACK FileWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARAM 
 	case WM_CLOSE:
 		EnableWindow(hParentWindow, true);
 		DestroyWindow(hWnd);
+		BringWindowToTop(hParentWindow);
 		break;
 	case WM_COMMAND:
 		switch (wp) {
 		case FILE_WINDOW_CANCEL:
 			SendMessage(hWnd, WM_CLOSE, NULL, NULL);
 			break;
-		case FILE_WINDOW_OPEN:
-			break;
-		case FILE_WINDOW_SAVE:
-			break;
+		case FILE_WINDOW_OPEN: {
+			//get input
+			wchar_t path_in[MAX_PATH];
+			GetWindowTextW(hFilePathInput, path_in, MAX_PATH);
+			if (OpenMapFromFile(hWnd, UserMap, path_in)) {
+				DisplayMapEditScreen(hParentWindow, UserMap.get_rows(), UserMap.get_cols(), true);		//tell the parent window that map came from file
+				SendMessage(hWnd, WM_CLOSE, NULL, NULL);
+			}
+			else {
+				SetWindowTextW(hFilePathInput, L"");
+			}
+			break; 
+		}
+		case FILE_WINDOW_SAVE: {
+			//get input
+			wchar_t path_in[MAX_PATH];
+			GetWindowTextW(hFilePathInput, path_in, MAX_PATH);
+			if (SaveMapToFile(hWnd, UserMap, path_in)) {
+				SendMessage(hWnd, WM_CLOSE, NULL, NULL);
+			}
+			else {
+				SetWindowTextW(hFilePathInput, L"");
+			}
+			break; 
+		}
 		}
 		break;
 	default:
@@ -126,7 +171,7 @@ void DisplayFileWindow(HWND hWnd,std::wstring FunctionType) {
 	int InstructionXPos{ (FileWidth - InstructionWidth) / 2 };
 	int InstructionYPos{ 10 };
 	std::wstringstream msg_stream;
-	msg_stream << L"Enter name to " << FunctionType << " the file. Include path if not current directory.";
+	msg_stream << L"Enter name to " << FunctionType << " the file. Specify path if not current directory.";
 	CreateWindowW(L"Static", msg_stream.str().c_str(), WS_VISIBLE | WS_CHILD | SS_CENTER,
 		InstructionXPos, InstructionYPos, InstructionWidth, InstructionHeight, hFileWindow, NULL, NULL, NULL);
 
@@ -135,7 +180,7 @@ void DisplayFileWindow(HWND hWnd,std::wstring FunctionType) {
 	int PathInputHeight{ 20 };
 	int PathInputXPos{ (FileWidth - PathInputWidth) / 2 };
 	int PathInputYPos{ InstructionYPos + InstructionHeight + 10 };
-	CreateWindow(L"Edit", NULL, WS_VISIBLE | WS_CHILD| WS_BORDER| ES_AUTOHSCROLL,
+	hFilePathInput = CreateWindow(L"Edit", NULL, WS_VISIBLE | WS_CHILD| WS_BORDER| ES_AUTOHSCROLL,
 		PathInputXPos, PathInputYPos, PathInputWidth, PathInputHeight, hFileWindow, NULL, NULL, NULL);
 
 	//ADD OPEN/SAVE AND CANCEL BUTTONS
@@ -176,20 +221,6 @@ HWND hNewMapWidthLabel;
 HWND hNewMapWidthInput;
 HWND hNewMapCreateButton;
 
-void DisplayMapEditScreen(HWND, const int, const int);					//screen shown when map is being edited
-base_map UserMap(4, 4);
-HMENU hMapEditMenu;
-HWND hBitmapHolder;
-HWND hStatusBar;
-bool MapEditAddingFreeSpace{ false };
-bool MapEditAddingObstacle{ false };
-bool MapEditAddingStart{ false };
-bool MapEditAddingEnd{ false };
-bool MapEditAddingL_Shape{ false };
-bool MapEditAddingSmallSquare{ false };
-bool MapEditAddingBigSquare{ false };
-bool MapEditAddingVLine{ false };
-bool MapEditAddingHLine{ false };
 
 void DisplayUserMap(HDC, const pixel_array&, const int);				//function for displaying user map as bitmap on screen
 
@@ -262,6 +293,9 @@ LRESULT CALLBACK ParentWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARA
 		case START_SCREEN__NEW:
 			DisplayNewMapScreen(hWnd);
 			break;
+		case MAP_OPENED_FROM_FILE:
+			DisplayMapEditScreen(hWnd, UserMap.get_rows(), UserMap.get_cols(), true);
+			break;
 		case NEW_MAP_SCREEN_CREATE: {
 			//check height and width inputs, and get integer values if correct
 			wchar_t height_in[100];
@@ -274,7 +308,7 @@ LRESULT CALLBACK ParentWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARA
 			if (CheckTextPosInt(hWnd, height_in, MinMapSize, MaxMapSize, height_out) && 
 				CheckTextPosInt(hWnd, width_in, MinMapSize, MaxMapSize, width_out)) {
 				//open map editor
-				DisplayMapEditScreen(hWnd, height_out, width_out);
+				DisplayMapEditScreen(hWnd, height_out, width_out, false);
 			}
 			break; 
 		}
@@ -678,6 +712,71 @@ int CalculateScale(const int int_in, const int max_size) {
 	return static_cast<int>(rounded_double);
 }
 
+bool SaveMapToFile(HWND hWnd, base_map& map_in, std::wstring file_path) {
+	//check file extension
+	size_t find_dot{ file_path.find(L".") };
+	std::wstringstream fname_stream;
+	fname_stream << file_path;
+	if (find_dot != std::wstring::npos) {
+		//check extension
+		if (file_path.substr(find_dot) != L".txt") {
+			MessageBox(hWnd, L"Invalid file name/extension", L"Error", MB_ICONERROR);
+			return false;
+		}
+	}
+	else {
+		//no extension, so add .txt
+		fname_stream << L".txt";
+	}
+	std::ofstream file_stream{ fname_stream.str() };
+	MessageBox(hWnd, fname_stream.str().c_str(), L"Name", NULL);
+	//check file exists
+	if (!file_stream) {
+		MessageBox(hWnd, L"Unable to access file", L"Error", MB_ICONERROR);
+		return false;
+	}
+	file_stream << map_in;
+	file_stream.close();
+	MessageBox(hWnd, L"Map saved successully", L"File saved", MB_ICONINFORMATION);
+	return true;
+}
+
+bool OpenMapFromFile(HWND hWnd, base_map& map_in, std::wstring file_path) {
+	//check file extension
+	size_t find_dot{ file_path.find(L".") };
+	std::wstringstream fname_stream{ file_path };
+	if (find_dot != std::wstring::npos) {
+		//check extension
+		if (file_path.substr(find_dot) != L".txt" ) {
+			MessageBox(hWnd, L"Invalid file name/extension", L"Error", MB_ICONERROR);
+			return false;
+		}
+	}
+	else {
+		//else no extension, so it is invalid
+		MessageBox(hWnd, L"Invalid file name/extension", L"Error", MB_ICONERROR);
+		return false;
+	}
+	//check file exists
+	std::ifstream file_stream{ fname_stream.str() };
+	if (!file_stream) {
+		MessageBox(hWnd, L"Unable to open file", L"Error", MB_ICONERROR);
+		file_stream.close();
+		return false;
+	}
+	//catch the errors thrown by the stream operator
+	try {
+		file_stream >> map_in;
+		file_stream.close();
+		return true;
+	}
+	catch (const std::invalid_argument&) {
+		file_stream.close();
+		MessageBox(hWnd, L"Invalid map file", L"Error", MB_ICONERROR);
+		return false;
+	}
+}
+
 void ShowHelpDialog(HWND hWnd) {
 
 	//TODO - add help button to start screen
@@ -817,7 +916,7 @@ void DisplayNewMapScreen(HWND hWnd) {
 	ChildWindowPtrs.push_back(&hNewMapCreateButton);
 }
 
-void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
+void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth, const bool OpenedFromFile){
 	//CHOOSE WHICH TO MAKE THE LONG SIDE
 	int BmpSideSize;
 	if (MapHeight > MapWidth) {
@@ -897,21 +996,24 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
 	ParentWidth = BitmapWidth + 15;
 	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);
 
-	//SET THE USER MAP AS A SQUARE & FILL TO DESIRED SIZE
-	UserMap = base_map(BmpSideSize, BmpSideSize);
-	if (MapHeight > MapWidth) {
-		//iterate over the right side of the map, filling out as walls
-		for (int i{ 0 }; i < UserMap.get_rows(); i++) {
-			for (int j{ MapWidth + 1 }; j < UserMap.get_cols(); j++) {
-				UserMap.set_coord(i, j, wall);
+	//IF MAP WAS NOT OPENED FROM A FILE
+	if (!OpenedFromFile) {
+		//SET THE USER MAP AS A SQUARE & FILL TO DESIRED SIZE
+		UserMap = base_map(BmpSideSize, BmpSideSize);
+		if (MapHeight > MapWidth) {
+			//iterate over the right side of the map, filling out as walls
+			for (int i{ 0 }; i < UserMap.get_rows(); i++) {
+				for (int j{ MapWidth + 1 }; j < UserMap.get_cols(); j++) {
+					UserMap.set_coord(i, j, wall);
+				}
 			}
 		}
-	}
-	else if (MapWidth > MapHeight) {
-		//iterate over the bottom side of the map, filling out as walls
-		for (int i{ MapHeight + 1 }; i < UserMap.get_rows(); i++) {
-			for (int j{ 0 }; j < UserMap.get_cols(); j++) {
-				UserMap.set_coord(i, j, wall);
+		else if (MapWidth > MapHeight) {
+			//iterate over the bottom side of the map, filling out as walls
+			for (int i{ MapHeight + 1 }; i < UserMap.get_rows(); i++) {
+				for (int j{ 0 }; j < UserMap.get_cols(); j++) {
+					UserMap.set_coord(i, j, wall);
+				}
 			}
 		}
 	}

@@ -5,7 +5,12 @@
 #define BASE_MAP_INCLUDED
 
 #include "generic_map_item.h"
+#include "map_definitions.h"
 #include "map_shape.h"
+#include <iostream>
+#include <algorithm>
+#include <stdexcept>
+#include <sstream>
 
 class map_shape;
 
@@ -30,5 +35,8 @@ public:
 	void add_shape(map_shape*);
 	//FIND START AND END
 	void find_start_end();
+	//STREAM OPERATORS FOR WORKING WITH FILES
+	friend std::ostream& operator<<(std::ostream&, const base_map&);
+	friend std::istream& operator>>(std::istream&, base_map&);
 };
 #endif

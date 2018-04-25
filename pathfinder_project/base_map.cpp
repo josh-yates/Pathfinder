@@ -1,16 +1,6 @@
 //definitions for base_map class
 #include "base_map.h"
 
-/*
-SHAPES
-Small square - 2x2
-Big square - 4x4
-L-shape - 3(h)x2(w)
-y=x mirrored L - 2(h)x3(w)
-H line 1x5
-V line 5x1
-*/
-
 //CONSTRUCTORS/DESTRUCTORS
 base_map::base_map(const int height, const int width) {
 	coordinates = std::move(array2D<map_point_type>(height + 2, width + 2, free_space));
@@ -144,4 +134,105 @@ void base_map::find_start_end() {
 	start_j = temp_sj;
 	end_i = temp_ei;
 	end_j = temp_ej;
+}
+
+std::ostream& operator<<(std::ostream& os, const base_map& map_in) {
+	//OUTPUT OF FORM  2 2 2\n2 0 2\n etc
+	//iterate over rows and columns
+	for (int i{ 0 }; i < map_in.get_rows(); i++) {
+		for (int j{ 0 }; j < map_in.get_cols(); j++) {
+			os << map_in(i, j);
+			if (j < map_in.get_cols() - 1) {
+				os << ',';
+			}
+		}
+		os << std::endl;
+	}
+	return os;
+}
+
+std::istream& operator>>(std::istream& is, base_map& map_in) {
+	//count number of rows and columns
+	int RowCount{ 0 };
+	int ColCount{ 0 };
+	std::string LineDump;
+	while (std::getline(is, LineDump)) {
+		if (RowCount == 0) {
+			ColCount = std::count(LineDump.begin(), LineDump.end(), ',');
+		}
+		else if (std::count(LineDump.begin(), LineDump.end(), ',') != ColCount) {
+			//if the number of columns isn't equal
+			OutputDebugString(L"Mismatching columns\n");
+			throw std::invalid_argument("Mismatching columns");
+		}
+		RowCount++;
+	}
+	//correct column count, as there are col-1 spaces
+	ColCount++;
+	std::wstringstream rowcolstream;
+	rowcolstream << RowCount << L" rows, " << ColCount << " cols" << std::endl;
+	OutputDebugString(rowcolstream.str().c_str());
+	//reset getline and create the map
+	is.clear();
+	is.seekg(0, is.beg);
+	map_in = base_map(RowCount - 2, ColCount - 2);
+	//iterate over the rows, getting each point's value
+	bool StartFound{ false };		//make sure only 1 start and end present
+	bool EndFound{ false };
+	std::string Tile;
+	std::string LineContents;
+	std::stringstream LineStream;
+	int i{ 0 };
+	while (std::getline(is, LineContents)) {
+		int j{ 0 };
+		LineStream << LineContents;
+		while (std::getline(LineStream, Tile, ',')) {
+			map_in.set_coord(i, j, static_cast<map_point_type>(std::stoi(Tile)));
+			j++;
+		}
+		LineStream.clear();
+		i++;
+	}
+	return is;
+
+	//for (int i{ 0 }; i < map_in.get_rows(); i++) {
+	//	for (int j{ 0 }; j < map_in.get_cols(); j++) {
+	//		std::getline(is, LineDump, ',');
+	//		std::wstringstream errstream;
+	//		errstream << i << L" " << j << " " << std::to_wstring(std::stoi(LineDump)) << std::endl;
+	//		OutputDebugString(errstream.str().c_str());
+	//		//if in a wall position, check it is a wall
+	//		if ((i == 0 || i == map_in.get_rows() - 1 || j == 0 || j == map_in.get_cols() - 1) && (LineDump != std::to_string(wall))) {
+	//			OutputDebugString(L"Invalid walls\n");
+	//			throw std::invalid_argument("Invalid walls");
+	//		}
+	//		//next, check if it is a start/end and whether there's already a start/end
+	//		else if ((LineDump == std::to_string(start_point) && StartFound) || (LineDump == std::to_string(end_point) && EndFound)) {
+	//			OutputDebugString(L"Multiple start/end");
+	//			throw std::invalid_argument("Multiple start/end");
+	//		}
+	//		//next, check if it is one of the map point types
+	//		else if (LineDump != std::to_string(free_space) && LineDump != std::to_string(obstacle) 
+	//			&& LineDump != std::to_string(wall) && LineDump != std::to_string(start_point) 
+	//			&& LineDump != std::to_string(end_point) && LineDump != std::to_string(path)) {
+	//			OutputDebugString(L"Not map_point_type\n");
+	//			throw std::invalid_argument("Not map_point_type");
+	//		}
+	//		//check if start/end found
+	//		else if (LineDump == std::to_string(start_point)) {
+	//			StartFound = true;
+	//		}
+	//		else if (LineDump == std::to_string(end_point)) {
+	//			EndFound = true;
+	//		}
+	//		//if point is path, overwrite with free space
+	//		else if (LineDump == std::to_string(path)) {
+	//			map_in.set_coord(i, j, free_space);
+	//		}
+	//		else {
+	//			map_in.set_coord(i, j, static_cast<map_point_type>(std::stoi(LineDump)));
+	//		}
+	//	}
+	//}
+	return is;
 }
