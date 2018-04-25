@@ -10,6 +10,7 @@
 #include <string>
 #include <limits>
 #include <cmath>
+#include <cwctype>
 #include "base_map.h"
 #include "astar.h"
 #include "pixel_array.h"
@@ -32,11 +33,19 @@
 #define	MAP_EDIT_SCREEN_ADD_V_LINE 14
 #define MAP_EDIT_SCREEN_ADD_H_LINE 15
 #define SHOW_HELP_PAGE 16
+#define FILE_WINDOW_OPEN 17
+#define FILE_WINDOW_SAVE 18
+#define FILE_WINDOW_CANCEL 19
+#define MAP_EDIT_SCREEN_SAVE 20
 
 //MAP RELATED VARIABLES
 const int MinMapSize{ 2 };
 const int MaxMapSize{ 50 };
 const int MaxBitmapSize{ 500 };
+
+//WINDOW HANDLES
+HWND hParentWindow;
+HWND hFileWindow;
 
 //PARENT WINDOW VARIABLES
 int ParentHeight{ 200 };
@@ -47,13 +56,111 @@ bool MapIsShowing{ false };
 bool AlgorithmRun{ false };
 
 //FORWARD DECLARATIONS
-LRESULT CALLBACK window_procedure(HWND, UINT, WPARAM, LPARAM);			//message handler
+LRESULT CALLBACK ParentWindowProcedure(HWND, UINT, WPARAM, LPARAM);			//message handler
 void GetWindowSize(HWND, int&, int&);
-void DeleteWindowContents(HWND);
+void DeleteParentWindowContents(HWND);
 bool CheckTextPosInt(HWND, const wchar_t*, const int, const int, int&);	//for checking text input is an integer
 int CalculateScale(const int, const int);
 void FalseAllMapEdits();
 void ShowHelpDialog(HWND);
+
+//BEGIN FILE DIALOG TEST
+
+LRESULT CALLBACK FileWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp) {
+	switch (message) {
+	case WM_CREATE:
+		EnableWindow(hParentWindow, false);
+		break;
+	case WM_CLOSE:
+		EnableWindow(hParentWindow, true);
+		DestroyWindow(hWnd);
+		break;
+	case WM_COMMAND:
+		switch (wp) {
+		case FILE_WINDOW_CANCEL:
+			SendMessage(hWnd, WM_CLOSE, NULL, NULL);
+			break;
+		case FILE_WINDOW_OPEN:
+			break;
+		case FILE_WINDOW_SAVE:
+			break;
+		}
+		break;
+	default:
+		return DefWindowProcW(hWnd, message, wp, lp);
+		break;
+	}
+}
+
+void RegisterFileWindow(HINSTANCE hInst) {
+	//same window class creation method as parent
+	WNDCLASSW FileWindowClass{ 0 };
+	FileWindowClass.hbrBackground = (HBRUSH)COLOR_WINDOW;		//paint background colour
+	FileWindowClass.hCursor = LoadCursor(NULL, IDC_ARROW);		//set cursor type
+	FileWindowClass.hInstance = hInst;							//current instance of this window, provided by OS
+	FileWindowClass.lpszClassName = L"FileWindowClass";			//window class identifier
+	FileWindowClass.lpfnWndProc = FileWindowProcedure;		//provide a message handler
+
+	//REGISTER WINDOW CLASS WITH OS
+	if (!RegisterClassW(&FileWindowClass)) {
+		MessageBox(NULL, L"Failed to register FileWindowClass", L"Error", MB_ICONWARNING);
+	}
+}
+
+void DisplayFileWindow(HWND hWnd,std::wstring FunctionType) {
+	//CHECK FUNCTIONTYPE
+	if (FunctionType != L"Open" && FunctionType != L"Save") {
+		throw "DisplayFileWindow: Invalid function type";
+	}
+	//FILE WINDOW VARIABLES
+	int FileHeight{ 200 };
+	int FileWidth{ 400 };
+
+	//CREATE THE WINDOW
+	hFileWindow = CreateWindowW(L"FileWindowClass", FunctionType.c_str(), WS_VISIBLE | WS_SYSMENU,
+		200, 200, FileWidth, FileHeight, hWnd, NULL, NULL, NULL);
+
+	//ADD INSTRUCTION MESSAGE
+	int InstructionWidth{ 400 };
+	int InstructionHeight{ 50 };
+	int InstructionXPos{ (FileWidth - InstructionWidth) / 2 };
+	int InstructionYPos{ 10 };
+	std::wstringstream msg_stream;
+	msg_stream << L"Enter name to " << FunctionType << " the file. Include path if not current directory.";
+	CreateWindowW(L"Static", msg_stream.str().c_str(), WS_VISIBLE | WS_CHILD | SS_CENTER,
+		InstructionXPos, InstructionYPos, InstructionWidth, InstructionHeight, hFileWindow, NULL, NULL, NULL);
+
+	//ADD FILE PATH INPUT
+	int PathInputWidth{ 300 };
+	int PathInputHeight{ 20 };
+	int PathInputXPos{ (FileWidth - PathInputWidth) / 2 };
+	int PathInputYPos{ InstructionYPos + InstructionHeight + 10 };
+	CreateWindow(L"Edit", NULL, WS_VISIBLE | WS_CHILD| WS_BORDER| ES_AUTOHSCROLL,
+		PathInputXPos, PathInputYPos, PathInputWidth, PathInputHeight, hFileWindow, NULL, NULL, NULL);
+
+	//ADD OPEN/SAVE AND CANCEL BUTTONS
+	int ButtonFunction;
+	if (FunctionType == L"Open") {
+		ButtonFunction = FILE_WINDOW_OPEN;
+	}
+	else {
+		ButtonFunction = FILE_WINDOW_SAVE;
+	}
+	int CancelButtonWidth{ 100 };
+	int CancelButtonHeight{ 30 };
+	int FunctionButtonWidth{ 100 };
+	int FunctionButtonHeight{ 30 };
+	int CancelButtonXPos{ (FileWidth / 2) - CancelButtonWidth - 10 };
+	int CancelButtonYPos{ PathInputYPos + PathInputHeight + 10 };
+	int FunctionButtonXPos{ (FileWidth / 2) + 10 };
+	int FunctionButtonYPos{ CancelButtonYPos };
+	CreateWindowW(L"Button", L"Cancel", WS_VISIBLE | WS_CHILD | SS_CENTER,
+		CancelButtonXPos, CancelButtonYPos, CancelButtonWidth, CancelButtonHeight, hFileWindow, (HMENU)FILE_WINDOW_CANCEL, NULL, NULL);
+	CreateWindowW(L"Button", FunctionType.c_str(), WS_VISIBLE | WS_CHILD | SS_CENTER,
+		FunctionButtonXPos, FunctionButtonYPos, FunctionButtonWidth, FunctionButtonHeight, hFileWindow, (HMENU)ButtonFunction, NULL, NULL);
+}
+
+//END FILE DIALOG TEST
 
 void DisplayStartScreen(HWND);											//start screen, with a message and two buttons
 HWND hStartMessage;
@@ -95,21 +202,24 @@ int WINAPI WinMain(
 	int ncmdshow) {
 
 	//CREATE WINDOW CLASS
-	WNDCLASSW main_window_class{ 0 };
-	main_window_class.hbrBackground = (HBRUSH)COLOR_WINDOW;		//paint background colour
-	main_window_class.hCursor = LoadCursor(NULL, IDC_ARROW);	//set cursor type
-	main_window_class.hInstance = hInst;						//current instance of this window, provided by OS
-	main_window_class.lpszClassName = L"main_window_class";		//window class identifier
-	main_window_class.lpfnWndProc = window_procedure;			//provide a message handler
+	WNDCLASSW ParentWindowClass{ 0 };
+	ParentWindowClass.hbrBackground = (HBRUSH)COLOR_WINDOW;		//paint background colour
+	ParentWindowClass.hCursor = LoadCursor(NULL, IDC_ARROW);	//set cursor type
+	ParentWindowClass.hInstance = hInst;						//current instance of this window, provided by OS
+	ParentWindowClass.lpszClassName = L"ParentWindowClass";		//window class identifier
+	ParentWindowClass.lpfnWndProc = ParentWindowProcedure;		//provide a message handler
 
 	//REGISTER WINDOW CLASS WITH OS
-	if (!RegisterClassW(&main_window_class)) {
-		MessageBox(NULL, L"Failed to register main_window_class", L"Error", MB_ICONWARNING);
+	if (!RegisterClassW(&ParentWindowClass)) {
+		MessageBox(NULL, L"Failed to register ParentWindowClass", L"Error", MB_ICONWARNING);
+		//register the file window
+		
 	}
+	RegisterFileWindow(hInst);
 
 	//CREATE WINDOW OBJECT
-	CreateWindowW(
-		L"main_window_class",		//the window class to make this object part of
+	hParentWindow = CreateWindowW(
+		L"ParentWindowClass",		//the window class to make this object part of
 		L"Pathfinder",				//window title
 		WS_SYSMENU | WS_VISIBLE,	//window display properties (non-resizeable, visible)
 		100, 100,					//x,y position of top LH corner on screen
@@ -127,7 +237,7 @@ int WINAPI WinMain(
 }
 
 //DECLARATION DEFINITIONS
-LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp) {
+LRESULT CALLBACK ParentWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp) {
 	//case dependent message handler
 	switch (message) {
 	//WINDOW CREATION
@@ -146,7 +256,9 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 			break;
 
 		//START SCREEN MESSAGES
-
+		case START_SCREEN__OPEN:
+			DisplayFileWindow(hWnd,L"Open");
+			break;
 		case START_SCREEN__NEW:
 			DisplayNewMapScreen(hWnd);
 			break;
@@ -172,6 +284,9 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 		case MAP_EDIT_SCREEN_EXIT:
 			//call the wm_destroy message to close the window
 			SendMessage(hWnd, WM_DESTROY, NULL, NULL);
+			break;
+		case MAP_EDIT_SCREEN_SAVE:
+			DisplayFileWindow(hWnd, L"Save");
 			break;
 		case MAP_EDIT_SCREEN_RESTART:
 			DisplayStartScreen(hWnd);
@@ -476,7 +591,7 @@ void GetWindowSize(HWND hWnd, int& width, int& height) {
 	height = WindowRect.bottom - WindowRect.top;
 }
 
-void DeleteWindowContents(HWND hWnd) {
+void DeleteParentWindowContents(HWND hWnd) {
 	//map is not showing, don't allow "carry over" of obstacle input info
 	MapIsShowing = false;
 	FalseAllMapEdits();
@@ -580,9 +695,10 @@ void ShowHelpDialog(HWND hWnd) {
 		<< L" and walls are added to reach the desired dimensions." << std::endl << std::endl;
 	HelpStream << L"MAP EDIT SCREEN:" << std::endl;
 	HelpStream << L"Here you can add obstacles and the start and end points to create your map. The controls for all obstacles (point, line shape) are toggleable, "
-		<< L"so you can use the same obstacle multiple times without needing to visit the menu. Switching to another obstacle will toggle-off the previous one. "
-		<< L" Free spaces are in the points menu, and can be used to remove obstacle/start/end points. The start and end points are not toggleable and can "
-		<< L"only be placed once, unless the original is removed with a free space. The path can be found by clicking Run, but the algorithm will only run when both the start and end points are present. "
+		<< L"so you can use the same obstacle multiple times without needing to revisit the menu. Switching to another obstacle will toggle-off the previous one. "
+		<< L" Free spaces are in the points menu, and can be used to remove obstacle/start/end points, with the exception of walls. "
+		<< L"Free spaces are also toggleable. The start and end points are not toggleable and can only be placed once, unless the original is removed with a free space. "
+		<< L"The path can be found by clicking Run, but the algorithm will only run when both the start and end points are present. "
 		<< L"If no route can be found a notification appears. The algorithm is quick, but there may be a noticeable delay on large maps. The map is not editable after "
 		<< L"the algorithm has been run. If the map is saved after the algorithm is run, it will contain details of the route found.";
 	MessageBox(hWnd, HelpStream.str().c_str(), L"Help page", NULL);
@@ -592,7 +708,7 @@ void ShowHelpDialog(HWND hWnd) {
 
 void DisplayStartScreen(HWND hWnd) {
 	//CLEAR CHILDREN WINDOWS SET PARENT WINDOW DIMENSIONS AND RESIZE
-	DeleteWindowContents(hWnd);
+	DeleteParentWindowContents(hWnd);
 	ParentHeight = 250;
 	ParentWidth = 300;
 	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);
@@ -615,7 +731,7 @@ void DisplayStartScreen(HWND hWnd) {
 	int OpenButtonXPos{ (ParentWidth - OpenButtonWidth) / 2 };
 	int OpenButtonYPos{ StartMessageYpos + StartMessageHeight + 10 };
 	hOpenButton = CreateWindowW(L"Button", L"Open from file", WS_VISIBLE | WS_CHILD | SS_CENTER,
-		OpenButtonXPos, OpenButtonYPos, OpenButtonWidth, OpenButtonHeight, hWnd, NULL, NULL, NULL);
+		OpenButtonXPos, OpenButtonYPos, OpenButtonWidth, OpenButtonHeight, hWnd, (HMENU)START_SCREEN__OPEN, NULL, NULL);
 
 	//NEW MAP BUTTON
 	int NewButtonWidth{ ButtonWidth };
@@ -642,7 +758,7 @@ void DisplayStartScreen(HWND hWnd) {
 
 void DisplayNewMapScreen(HWND hWnd) {
 	//CLEAR THE WINDOW AND RESIZE
-	DeleteWindowContents(hWnd);
+	DeleteParentWindowContents(hWnd);
 	ParentHeight = 250;
 	ParentWidth = 300;
 	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);		//resize the window, without moving it
@@ -714,7 +830,7 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
 	//MENUS
 
 	//CLEAR WINDOW
-	DeleteWindowContents(hWnd);
+	DeleteParentWindowContents(hWnd);
 
 	//ADD MAIN MENU
 	hMapEditMenu = CreateMenu();
@@ -723,7 +839,7 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
 	//TODO add messages for menu buttons
 	HMENU hFileMenu{ CreateMenu() };
 	AppendMenu(hFileMenu, MF_STRING, MAP_EDIT_SCREEN_RESTART, L"Restart");
-	AppendMenu(hFileMenu, MF_STRING, NULL, L"Save Map");
+	AppendMenu(hFileMenu, MF_STRING, MAP_EDIT_SCREEN_SAVE, L"Save Map");
 	AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);
 	AppendMenu(hFileMenu, MF_STRING, MAP_EDIT_SCREEN_EXIT, L"Exit");
 
