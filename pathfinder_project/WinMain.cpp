@@ -7,14 +7,13 @@
 #include <fstream>
 #include <vector>
 #include <sstream>
+#include <string>
 #include <limits>
 #include <cmath>
 #include "base_map.h"
 #include "astar.h"
 #include "pixel_array.h"
 #include "derived_shapes.h"
-
-//TODO maybe have parent window size as global variable, could negate ParentWidth etc
 
 //CUSTOM MESSAGE DEFINITIONS
 #define START_SCREEN__OPEN 1
@@ -32,7 +31,7 @@
 #define MAP_EDIT_SCREEN_ADD_BIG_SQUARE 13
 #define	MAP_EDIT_SCREEN_ADD_V_LINE 14
 #define MAP_EDIT_SCREEN_ADD_H_LINE 15
-
+#define MAP_EDIT_SCREEN_HELP 16
 
 //MAP RELATED VARIABLES
 const int MinMapSize{ 2 };
@@ -54,6 +53,7 @@ void DeleteWindowContents(HWND);
 bool CheckTextPosInt(HWND, const wchar_t*, const int, const int, int&);	//for checking text input is an integer
 int CalculateScale(const int, const int);
 void FalseAllMapEdits();
+void ShowHelpDialog(HWND);
 
 void DisplayStartScreen(HWND);											//start screen, with a message and two buttons
 HWND hStartMessage;
@@ -157,12 +157,17 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 			}
 			break; 
 		}
+
+		//MAP EDIT FILE (ETC) MESSAGES
 		case MAP_EDIT_SCREEN_EXIT:
 			//call the wm_destroy message to close the window
 			SendMessage(hWnd, WM_DESTROY, NULL, NULL);
 			break;
 		case MAP_EDIT_SCREEN_RESTART:
 			DisplayStartScreen(hWnd);
+			break;
+		case MAP_EDIT_SCREEN_HELP:
+			ShowHelpDialog(hWnd);
 			break;
 
 		//POINTS MESSAGES
@@ -551,6 +556,31 @@ int CalculateScale(const int int_in, const int max_size) {
 	return static_cast<int>(rounded_double);
 }
 
+void ShowHelpDialog(HWND hWnd) {
+
+	//TODO - add help button to start screen
+
+	//create help/instruction message
+	std::wstringstream HelpStream;
+	HelpStream << L"PATHFINDER HELP PAGE" << std::endl << std::endl;
+	HelpStream << L"Pathfinder.exe is a program for creating grid-based maps and finding routes through them." << std::endl << std::endl;
+	HelpStream << L"START SCREEN:" << std::endl;
+	HelpStream << L"You can load a map from a file for editing, or create a new map on the new map screen. "
+		<< L"If the loaded map is already solved, the route will be cleared" << std::endl << std::endl;
+	HelpStream << L"NEW MAP SCREEN:" << std::endl;
+	HelpStream << L"You can enter the width and height values for the map, between " << MinMapSize << L" and " << MaxMapSize << L" tiles."
+		<< L" Walls are automatically added outside the map space. If the width and height are not equal, the map edge size is the bigger of the two"
+		<< L" and walls are added to reach the desired dimensions." << std::endl << std::endl;
+	HelpStream << L"MAP EDIT SCREEN:" << std::endl;
+	HelpStream << L"Here you can add obstacles and the start and end points to create your map. The controls for all obstacles (point, line shape) are toggleable, "
+		<< L"so you can use the same obstacle multiple times without needing to visit the menu. Switching to another obstacle will toggle-off the previous one. "
+		<< L" Free spaces are in the points menu, and can be used to remove obstacle/start/end points. The start and end points are not toggleable and can "
+		<< L"only be placed once, unless the original is removed with a free space. The path can be found by clicking Run, but the algorithm will only run when both the start and end points are present. "
+		<< L"If no route can be found a notification appears. The algorithm is quick, but there may be a noticeable delay on large maps. The map is not editable after "
+		<< L"the algorithm has been run. If the map is saved after the algorithm is run, it will contain details of the route found.";
+	MessageBox(hWnd, HelpStream.str().c_str(), L"Help page", NULL);
+}
+
 //SCREEN FUNCTIONS
 
 void DisplayStartScreen(HWND hWnd) {
@@ -709,7 +739,7 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
 	AppendMenu(hMapEditMenu, MF_STRING, MAP_EDIT_RUN_ALGORITHM, L"Run");
 
 	//ADD HELP MENU
-	AppendMenu(hMapEditMenu, MF_STRING, NULL, L"Help");
+	AppendMenu(hMapEditMenu, MF_STRING, MAP_EDIT_SCREEN_HELP, L"Help");
 
 	SetMenu(hWnd, hMapEditMenu);
 	MenuPtrs.push_back(&hMapEditMenu);
