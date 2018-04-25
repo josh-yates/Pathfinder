@@ -1,8 +1,7 @@
 //function definitions for pixel_array class
 #include "pixel_array.h"
 //CONSTRUCTORS/DESTRUCTORS
-pixel_array::pixel_array(const base_map& map_in, const std::map<int, COLORREF> translation_key) {
-	pixel_data = array2D<COLORREF>(map_in.get_rows(), map_in.get_cols(), default_color);
+pixel_array::pixel_array(const base_map& map_in, const std::map<int, COLORREF> translation_key):pixel_data(map_in.get_rows(), map_in.get_cols(), default_color) {
 	//translate each map_array item via translation_key's specifications
 	for (int i{ 0 }; i < pixel_data.get_m_rows(); i++) {
 		for (int j{ 0 }; j < pixel_data.get_n_cols(); j++) {

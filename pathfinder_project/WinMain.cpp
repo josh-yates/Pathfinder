@@ -4,6 +4,7 @@
 
 //INCLUDES
 #include <Windows.h>
+#include <fstream>
 #include <vector>
 #include <sstream>
 #include <limits>
@@ -11,6 +12,7 @@
 #include "base_map.h"
 #include "astar.h"
 #include "pixel_array.h"
+#include "derived_shapes.h"
 
 //TODO maybe have parent window size as global variable, could negate ParentWidth etc
 
@@ -24,9 +26,16 @@
 #define MAP_EDIT_SCREEN_ADD_POINTS_START 7
 #define MAP_EDIT_SCREEN_ADD_POINTS_END 8
 #define MAP_EDIT_RUN_ALGORITHM 9
+#define MAP_EDIT_SCREEN_ADD_L_SHAPE 10
+#define MAP_EDIT_SCREEN_ADD_SMALL_SQUARE 11
+#define MAP_EDIT_SCREEN_ADD_FREE_SPACE 12
+#define MAP_EDIT_SCREEN_ADD_BIG_SQUARE 13
+#define	MAP_EDIT_SCREEN_ADD_V_LINE 14
+#define MAP_EDIT_SCREEN_ADD_H_LINE 15
+
 
 //MAP RELATED VARIABLES
-const int MinMapSize{ 4 };
+const int MinMapSize{ 2 };
 const int MaxMapSize{ 50 };
 const int MaxBitmapSize{ 500 };
 
@@ -62,14 +71,20 @@ HWND hNewMapCreateButton;
 void DisplayMapEditScreen(HWND, const int, const int);					//screen shown when map is being edited
 base_map UserMap(4, 4);
 HMENU hMapEditMenu;
-bool MapEditAddingShapes{ false };
+HWND hBitmapHolder;
+HWND hStatusBar;
+bool MapEditAddingFreeSpace{ false };
 bool MapEditAddingObstacle{ false };
 bool MapEditAddingStart{ false };
 bool MapEditAddingEnd{ false };
-bool MapEditAddingLine{ false };
+bool MapEditAddingL_Shape{ false };
+bool MapEditAddingSmallSquare{ false };
+bool MapEditAddingBigSquare{ false };
+bool MapEditAddingVLine{ false };
+bool MapEditAddingHLine{ false };
 
 void DisplayUserMap(HDC, const pixel_array&, const int);				//function for displaying user map as bitmap on screen
-HWND hBitmapHolder;
+
 
 //MAIN PROGRAM
 int WINAPI WinMain(
@@ -149,20 +164,9 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 		case MAP_EDIT_SCREEN_RESTART:
 			DisplayStartScreen(hWnd);
 			break;
-		case MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE:
-			if (AlgorithmRun) {
-				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
-				MapEditAddingObstacle = false;
-			}
-			//toggle the obstacle adding
-			else if (MapEditAddingObstacle) {
-				FalseAllMapEdits();
-			}
-			else if (!MapEditAddingObstacle) {
-				FalseAllMapEdits();
-				MapEditAddingObstacle = true;
-			}
-			break;
+
+		//POINTS MESSAGES
+
 		case MAP_EDIT_SCREEN_ADD_POINTS_START:
 			//check start not already defined
 			UserMap.find_start_end();
@@ -199,6 +203,111 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 				MapEditAddingEnd = false;
 			}
 			break;
+		case MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE:
+			if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingObstacle = false;
+			}
+			//toggle the obstacle adding
+			else if (MapEditAddingObstacle) {
+				FalseAllMapEdits();
+			}
+			else if (!MapEditAddingObstacle) {
+				FalseAllMapEdits();
+				MapEditAddingObstacle = true;
+			}
+			break;
+		case MAP_EDIT_SCREEN_ADD_FREE_SPACE:
+			if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingFreeSpace = false;
+			}
+			//toggle the obstacle adding
+			else if (MapEditAddingFreeSpace) {
+				FalseAllMapEdits();
+			}
+			else if (!MapEditAddingFreeSpace) {
+				FalseAllMapEdits();
+				MapEditAddingFreeSpace = true;
+			}
+			break;
+
+		//SHAPE MESSAGES
+
+		case MAP_EDIT_SCREEN_ADD_L_SHAPE:
+			if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingL_Shape = false;
+			}
+			//toggle the shape adding
+			else if (MapEditAddingL_Shape) {
+				FalseAllMapEdits();
+			}
+			else if (!MapEditAddingL_Shape) {
+				FalseAllMapEdits();
+				MapEditAddingL_Shape = true;
+			}
+			break;
+		case MAP_EDIT_SCREEN_ADD_SMALL_SQUARE:
+			if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingSmallSquare = false;
+			}
+			//toggle the shape adding
+			else if (MapEditAddingSmallSquare) {
+				FalseAllMapEdits();
+			}
+			else if (!MapEditAddingSmallSquare) {
+				FalseAllMapEdits();
+				MapEditAddingSmallSquare = true;
+			}
+			break;
+		case MAP_EDIT_SCREEN_ADD_BIG_SQUARE:
+			if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingBigSquare = false;
+			}
+			//toggle the shape adding
+			else if (MapEditAddingBigSquare) {
+				FalseAllMapEdits();
+			}
+			else if (!MapEditAddingBigSquare) {
+				FalseAllMapEdits();
+				MapEditAddingBigSquare = true;
+			}
+			break;
+		//LINES MESSAGES
+		case MAP_EDIT_SCREEN_ADD_H_LINE:
+			if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingHLine = false;
+			}
+			//toggle the shape adding
+			else if (MapEditAddingHLine) {
+				FalseAllMapEdits();
+			}
+			else if (!MapEditAddingHLine) {
+				FalseAllMapEdits();
+				MapEditAddingHLine = true;
+			}
+			break;
+		case MAP_EDIT_SCREEN_ADD_V_LINE:
+			if (AlgorithmRun) {
+				MessageBox(hBitmapHolder, L"Algorithm already run", L"Algorithm result", MB_ICONINFORMATION);
+				MapEditAddingVLine = false;
+			}
+			//toggle the shape adding
+			else if (MapEditAddingVLine) {
+				FalseAllMapEdits();
+			}
+			else if (!MapEditAddingVLine) {
+				FalseAllMapEdits();
+				MapEditAddingVLine = true;
+			}
+			break;
+
+		//ALGORITHM MESSAGE
+
 		case MAP_EDIT_RUN_ALGORITHM: {
 			FalseAllMapEdits();
 			//check if start/end not defined
@@ -261,42 +370,77 @@ LRESULT CALLBACK window_procedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp)
 			POINT MousePos;
 			MousePos.x = LOWORD(lp);
 			MousePos.y = HIWORD(lp);
-			/*std::wstring clickmsg{ L"click pos: " + std::to_wstring(MousePos.x) + L" , " + std::to_wstring(MousePos.y) };
-			MessageBox(NULL, clickmsg.c_str(), L"Click", MB_ICONINFORMATION | MB_DEFAULT_DESKTOP_ONLY);*/
-			//TODO add functionality to adders
-			if (MapEditAddingObstacle || MapEditAddingEnd || MapEditAddingStart) {
-				//calculate scale used to get to bitmap size
-				int Scale{ CalculateScale(UserMap.get_cols(),MaxBitmapSize) };
-				int MapXClick{ static_cast<int>(static_cast<double>(MousePos.x) / static_cast<double>(Scale)) };
-				int MapYClick{ static_cast<int>(static_cast<double>(MousePos.y) / static_cast<double>(Scale)) };
-				//if the clicked area is in the map, add the corresponding point type
-				map_point_type point_to_add{ free_space };
-				if (MapEditAddingObstacle) {
-					FalseAllMapEdits();
-					MapEditAddingObstacle = true;
-					point_to_add = obstacle;
-				}
-				else if (MapEditAddingEnd) {
-					FalseAllMapEdits();
-					point_to_add = end_point;
-				}
-				else if (MapEditAddingStart) {
-					FalseAllMapEdits();
-					point_to_add = start_point;
-				}
-				if (MapXClick >= 0 && MapXClick < UserMap.get_cols() && MapYClick >= 0 && MapYClick < UserMap.get_rows()) {
-					if (UserMap(MapYClick, MapXClick) == free_space) {
+			//calculate scale used to get to bitmap size
+			int Scale{ CalculateScale(UserMap.get_cols(),MaxBitmapSize) };
+			int MapXClick{ static_cast<int>(static_cast<double>(MousePos.x) / static_cast<double>(Scale)) };
+			int MapYClick{ static_cast<int>(static_cast<double>(MousePos.y) / static_cast<double>(Scale)) };
+			//check point is inside the user map
+			if (MapXClick >= 0 && MapXClick < UserMap.get_cols() && MapYClick >= 0 && MapYClick < UserMap.get_rows()) {
+				//POINT HANDLERS
+				if (MapEditAddingObstacle || MapEditAddingEnd || MapEditAddingStart || MapEditAddingFreeSpace) {
+
+					//if the clicked area is in the map, add the corresponding point type
+					map_point_type point_to_add{ free_space };
+					if (MapEditAddingObstacle) {
+						FalseAllMapEdits();
+						MapEditAddingObstacle = true;		//keep obstacle point toggled on
+						point_to_add = obstacle;
+					}
+					else if (MapEditAddingEnd) {
+						FalseAllMapEdits();
+						point_to_add = end_point;
+					}
+					else if (MapEditAddingStart) {
+						FalseAllMapEdits();
+						point_to_add = start_point;
+					}
+					else if (MapEditAddingFreeSpace) {
+						FalseAllMapEdits();
+						MapEditAddingFreeSpace = true;		//keep free space toggled on
+					}
+					//if adding a free space, check that the click spot is not a wall, else, check it's a free space
+					if (MapEditAddingFreeSpace && UserMap(MapYClick, MapXClick) != wall) {
+						UserMap.set_coord(MapYClick, MapXClick, free_space);
+					}
+					else if (UserMap(MapYClick, MapXClick) == free_space) {
 						UserMap.set_coord(MapYClick, MapXClick, point_to_add);
 					}
 				}
+				//SHAPE/LINE HANDLERS
+				else if (MapEditAddingL_Shape || MapEditAddingSmallSquare || MapEditAddingBigSquare || MapEditAddingHLine || MapEditAddingVLine) {
+					//depending on shape/line type (lines are shapes), add that shape to the map
+					if (MapEditAddingL_Shape) {
+						FalseAllMapEdits();
+						MapEditAddingL_Shape = true;
+						L_shape lshape(UserMap, MapYClick, MapXClick);
+						UserMap.add_shape(&lshape);
+					}
+					else if (MapEditAddingSmallSquare) {
+						FalseAllMapEdits();
+						MapEditAddingSmallSquare = true;
+						small_square ssquare(UserMap, MapYClick, MapXClick);
+						UserMap.add_shape(&ssquare);
+					}
+					else if (MapEditAddingBigSquare) {
+						FalseAllMapEdits();
+						MapEditAddingBigSquare = true;
+						big_square bsquare(UserMap, MapYClick, MapXClick);
+						UserMap.add_shape(&bsquare);
+					}
+					else if (MapEditAddingHLine) {
+						FalseAllMapEdits();
+						MapEditAddingHLine = true;
+						horizontal_line hline(UserMap, MapYClick, MapXClick);
+						UserMap.add_shape(&hline);
+					}
+					else if (MapEditAddingVLine) {
+						FalseAllMapEdits();
+						MapEditAddingVLine = true;
+						vertical_line vline(UserMap, MapYClick, MapXClick);
+						UserMap.add_shape(&vline);
+					}
+				}
 			}
-			else if (MapEditAddingLine) {
-
-			}
-			else if (MapEditAddingShapes) {
-
-			}
-
 		}
 		//force repaint
 		InvalidateRect(hWnd, NULL, FALSE);
@@ -341,11 +485,15 @@ void DeleteWindowContents(HWND hWnd) {
 
 void FalseAllMapEdits() {
 	//set all map editing trackers to false
-	MapEditAddingLine = false;
+	MapEditAddingFreeSpace = false;
+	MapEditAddingL_Shape = false;
 	MapEditAddingObstacle = false;
-	MapEditAddingShapes = false;
+	MapEditAddingSmallSquare = false;
 	MapEditAddingStart = false;
 	MapEditAddingEnd = false;
+	MapEditAddingBigSquare = false;
+	MapEditAddingVLine = false;
+	MapEditAddingHLine = false;
 }
 
 bool CheckTextPosInt(HWND hWnd, const wchar_t* input_wchar,const int min_val, const int max_val, int& int_out) {
@@ -533,19 +681,26 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
 
 	//ADD SHAPES MENU
 	HMENU hShapesMenu{ CreateMenu() };
-	AppendMenu(hShapesMenu, MF_STRING, NULL, L"Line");
-	AppendMenu(hShapesMenu, MF_STRING, NULL, L"Rectangle");
-	AppendMenu(hShapesMenu, MF_STRING, NULL, L"Circle");
+	AppendMenu(hShapesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_SMALL_SQUARE, L"Small square");
+	AppendMenu(hShapesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_BIG_SQUARE, L"Big square");
+	AppendMenu(hShapesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_L_SHAPE, L"L shape");
 
 	//ADD POINTS MENU
 	HMENU hPointsMenu{ CreateMenu() };
 	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS_START, L"Start");
 	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS_END, L"End");
+	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_FREE_SPACE, L"Free space");
 	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE, L"Obstacle");
+
+	//ADD LINES MENU
+	HMENU hLinesMenu{ CreateMenu() };
+	AppendMenu(hLinesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_V_LINE, L"Vertical");
+	AppendMenu(hLinesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_H_LINE, L"Horizontal");
 
 	//ADD INSERT MENU
 	HMENU hInsertMenu{ CreateMenu() };
 	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hPointsMenu, L"Points");
+	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hLinesMenu, L"Lines");
 	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hShapesMenu, L"Shapes");
 
 	AppendMenu(hMapEditMenu, MF_POPUP, (UINT_PTR)hInsertMenu, L"Insert");
@@ -561,8 +716,10 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth){
 
 	//MAP AND BITMAP - SUBWINDOW TO HOLD BITMAP
 	int Scale{ CalculateScale(BmpSideSize, MaxBitmapSize) };
-	int BitmapWidth{ BmpSideSize*Scale };
-	int BitmapHeight{ BmpSideSize*Scale };
+	//to fix improper scaling of the window, can cause underscaling, but prevents cutoffs
+	int ScalingFix{ static_cast<int>((0.8 * static_cast<double>(MaxBitmapSize)) / static_cast<double>(Scale)) };
+	int BitmapWidth{ MaxBitmapSize + ScalingFix };
+	int BitmapHeight{ MaxBitmapSize + ScalingFix };
 	int BitmapXPos{ 0 };
 	int BitmapYPos{ 0 };
 	hBitmapHolder = CreateWindowW(L"Static", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER,

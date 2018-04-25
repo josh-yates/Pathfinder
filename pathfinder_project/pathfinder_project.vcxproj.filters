@@ -30,6 +30,12 @@
     <ClCompile Include="pixel_array.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="map_shape.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="derived_shapes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="array2D.h">
@@ -48,6 +54,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="pixel_array.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="map_shape.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="derived_shapes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

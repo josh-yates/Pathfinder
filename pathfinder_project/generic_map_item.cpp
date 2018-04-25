@@ -11,6 +11,9 @@ int generic_map_item::get_rows()const {
 int generic_map_item::get_cols()const {
 	return coordinates.get_n_cols();
 }
+map_point_type generic_map_item::operator()(const int i, const int j)const {
+	return coordinates(i, j);
+}
 //SETTERS
 void generic_map_item::set_coord(const int i, const int j, const map_point_type point) {
 	//range checking

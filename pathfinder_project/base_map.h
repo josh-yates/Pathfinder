@@ -5,6 +5,10 @@
 #define BASE_MAP_INCLUDED
 
 #include "generic_map_item.h"
+#include "map_shape.h"
+
+class map_shape;
+
 class base_map : public generic_map_item {
 private:
 	int start_i, start_j, end_i, end_j;
@@ -22,6 +26,8 @@ public:
 	map_point_type operator()(const int, const int)const;
 	//SETTERS
 	void set_coord(const int, const int, const map_point_type);
+	//SHAPE ADD
+	void add_shape(map_shape*);
 	//FIND START AND END
 	void find_start_end();
 };

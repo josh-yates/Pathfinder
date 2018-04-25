@@ -15,6 +15,7 @@ public:
 	//GETTERS
 	int get_rows()const;
 	int get_cols()const;
+	map_point_type operator()(const int, const int)const;
 	//SETTERS
 	void set_coord(const int, const int, const map_point_type);
 };
