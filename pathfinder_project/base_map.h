@@ -16,6 +16,7 @@ class map_shape;
 
 class base_map : public generic_map_item {
 private:
+	char separator;
 	int start_i, start_j, end_i, end_j;
 public:
 	//CONSTRUCTORS/DESTRUCTORS

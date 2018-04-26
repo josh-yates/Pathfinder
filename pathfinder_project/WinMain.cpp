@@ -729,7 +729,6 @@ bool SaveMapToFile(HWND hWnd, base_map& map_in, std::wstring file_path) {
 		fname_stream << L".txt";
 	}
 	std::ofstream file_stream{ fname_stream.str() };
-	MessageBox(hWnd, fname_stream.str().c_str(), L"Name", NULL);
 	//check file exists
 	if (!file_stream) {
 		MessageBox(hWnd, L"Unable to access file", L"Error", MB_ICONERROR);
@@ -768,7 +767,18 @@ bool OpenMapFromFile(HWND hWnd, base_map& map_in, std::wstring file_path) {
 	try {
 		file_stream >> map_in;
 		file_stream.close();
-		return true;
+		//check if map is too big/small
+		if (map_in.get_rows() - 2 > MaxMapSize || map_in.get_cols() - 2 > MaxMapSize) {
+			MessageBox(hWnd, L"Map too large", L"Error", MB_ICONERROR);
+			return false;
+		}
+		else if (map_in.get_rows() - 2 < MinMapSize || map_in.get_cols() - 2 < MinMapSize) {
+			MessageBox(hWnd, L"Map too small", L"Error", MB_ICONERROR);
+			return false;
+		}
+		else {
+			return true;
+		}
 	}
 	catch (const std::invalid_argument&) {
 		file_stream.close();

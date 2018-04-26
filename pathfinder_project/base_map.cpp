@@ -18,6 +18,8 @@ base_map::base_map(const int height, const int width) {
 	start_j = -1;
 	end_i = -1;
 	end_j = -1;
+	//set the separator for use in input/output
+	separator = ' ';
 }
 base_map::~base_map() {}
 //GETTERS
@@ -143,7 +145,7 @@ std::ostream& operator<<(std::ostream& os, const base_map& map_in) {
 		for (int j{ 0 }; j < map_in.get_cols(); j++) {
 			os << map_in(i, j);
 			if (j < map_in.get_cols() - 1) {
-				os << ',';
+				os << map_in.separator;
 			}
 		}
 		os << std::endl;
@@ -158,20 +160,16 @@ std::istream& operator>>(std::istream& is, base_map& map_in) {
 	std::string LineDump;
 	while (std::getline(is, LineDump)) {
 		if (RowCount == 0) {
-			ColCount = std::count(LineDump.begin(), LineDump.end(), ',');
+			ColCount = std::count(LineDump.begin(), LineDump.end(), map_in.separator);
 		}
-		else if (std::count(LineDump.begin(), LineDump.end(), ',') != ColCount) {
+		else if (std::count(LineDump.begin(), LineDump.end(), map_in.separator) != ColCount) {
 			//if the number of columns isn't equal
-			OutputDebugString(L"Mismatching columns\n");
 			throw std::invalid_argument("Mismatching columns");
 		}
 		RowCount++;
 	}
 	//correct column count, as there are col-1 spaces
 	ColCount++;
-	std::wstringstream rowcolstream;
-	rowcolstream << RowCount << L" rows, " << ColCount << " cols" << std::endl;
-	OutputDebugString(rowcolstream.str().c_str());
 	//reset getline and create the map
 	is.clear();
 	is.seekg(0, is.beg);
@@ -179,60 +177,56 @@ std::istream& operator>>(std::istream& is, base_map& map_in) {
 	//iterate over the rows, getting each point's value
 	bool StartFound{ false };		//make sure only 1 start and end present
 	bool EndFound{ false };
+
+	//loop over lines and columns, running checks
 	std::string Tile;
 	std::string LineContents;
 	std::stringstream LineStream;
 	int i{ 0 };
+	//get each line and put into string stream (row iteration)
 	while (std::getline(is, LineContents)) {
 		int j{ 0 };
 		LineStream << LineContents;
-		while (std::getline(LineStream, Tile, ',')) {
-			map_in.set_coord(i, j, static_cast<map_point_type>(std::stoi(Tile)));
+		//get each tile from stringstream (column iteration)
+		while (std::getline(LineStream, Tile, map_in.separator)) {
+			//if in a wall position, check it is a wall
+			if ((i == 0 || i == map_in.get_rows() - 1 || j == 0 || j == map_in.get_cols() - 1) && (Tile != std::to_string(wall))) {
+				throw std::invalid_argument("Invalid walls");
+			}
+			//next, if not a wall position, check point is not a wall
+			else if ((i > 0 && i < map_in.get_rows() - 1 && j > 0 && j < map_in.get_cols() - 1) && (Tile == std::to_string(wall))) {
+				throw std::invalid_argument("Wall in editable map area");
+			}
+			//next, check if it is a start/end and whether there's already a start/end
+			else if ((Tile == std::to_string(start_point) && StartFound) || (Tile == std::to_string(end_point) && EndFound)) {
+				throw std::invalid_argument("Multiple start/end");
+			}
+			//next, check if it is one of the map point types
+			else if (Tile != std::to_string(free_space) && Tile != std::to_string(obstacle) 
+				&& Tile != std::to_string(wall) && Tile != std::to_string(start_point)
+				&& Tile != std::to_string(end_point) && Tile != std::to_string(path)) {
+				throw std::invalid_argument("Not map_point_type");
+			}
+			//check if start/end found
+			else if (Tile == std::to_string(start_point)) {
+				map_in.set_coord(i, j, static_cast<map_point_type>(std::stoi(Tile)));
+				StartFound = true;
+			}
+			else if (Tile == std::to_string(end_point)) {
+				map_in.set_coord(i, j, static_cast<map_point_type>(std::stoi(Tile)));
+				EndFound = true;
+			}
+			//if point is path, overwrite with free space
+			else if (Tile == std::to_string(path)) {
+				map_in.set_coord(i, j, free_space);
+			}
+			else {
+				map_in.set_coord(i, j, static_cast<map_point_type>(std::stoi(Tile)));
+			}
 			j++;
 		}
 		LineStream.clear();
 		i++;
 	}
-	return is;
-
-	//for (int i{ 0 }; i < map_in.get_rows(); i++) {
-	//	for (int j{ 0 }; j < map_in.get_cols(); j++) {
-	//		std::getline(is, LineDump, ',');
-	//		std::wstringstream errstream;
-	//		errstream << i << L" " << j << " " << std::to_wstring(std::stoi(LineDump)) << std::endl;
-	//		OutputDebugString(errstream.str().c_str());
-	//		//if in a wall position, check it is a wall
-	//		if ((i == 0 || i == map_in.get_rows() - 1 || j == 0 || j == map_in.get_cols() - 1) && (LineDump != std::to_string(wall))) {
-	//			OutputDebugString(L"Invalid walls\n");
-	//			throw std::invalid_argument("Invalid walls");
-	//		}
-	//		//next, check if it is a start/end and whether there's already a start/end
-	//		else if ((LineDump == std::to_string(start_point) && StartFound) || (LineDump == std::to_string(end_point) && EndFound)) {
-	//			OutputDebugString(L"Multiple start/end");
-	//			throw std::invalid_argument("Multiple start/end");
-	//		}
-	//		//next, check if it is one of the map point types
-	//		else if (LineDump != std::to_string(free_space) && LineDump != std::to_string(obstacle) 
-	//			&& LineDump != std::to_string(wall) && LineDump != std::to_string(start_point) 
-	//			&& LineDump != std::to_string(end_point) && LineDump != std::to_string(path)) {
-	//			OutputDebugString(L"Not map_point_type\n");
-	//			throw std::invalid_argument("Not map_point_type");
-	//		}
-	//		//check if start/end found
-	//		else if (LineDump == std::to_string(start_point)) {
-	//			StartFound = true;
-	//		}
-	//		else if (LineDump == std::to_string(end_point)) {
-	//			EndFound = true;
-	//		}
-	//		//if point is path, overwrite with free space
-	//		else if (LineDump == std::to_string(path)) {
-	//			map_in.set_coord(i, j, free_space);
-	//		}
-	//		else {
-	//			map_in.set_coord(i, j, static_cast<map_point_type>(std::stoi(LineDump)));
-	//		}
-	//	}
-	//}
 	return is;
 }
