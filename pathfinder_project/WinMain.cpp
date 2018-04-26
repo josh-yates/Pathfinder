@@ -222,7 +222,7 @@ HWND hNewMapWidthInput;
 HWND hNewMapCreateButton;
 
 
-void DisplayUserMap(HDC, const pixel_array&, const int);				//function for displaying user map as bitmap on screen
+void DisplayUserMap(HDC, const base_map&, const int);				//function for displaying user map as bitmap on screen
 
 
 //MAIN PROGRAM
@@ -511,9 +511,8 @@ LRESULT CALLBACK ParentWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARA
 		HDC hdc;
 		if (MapIsShowing) {
 			hdc = BeginPaint(hBitmapHolder, &ps);
-			pixel_array px_arr(UserMap, int_to_px_translate);
 			int Scale{ CalculateScale(UserMap.get_cols(),MaxBitmapSize) };
-			DisplayUserMap(hdc, px_arr, Scale);
+			DisplayUserMap(hdc, UserMap, Scale);
 			EndPaint(hBitmapHolder, &ps);
 			hdc = BeginPaint(hWnd, &ps);
 			EndPaint(hWnd, &ps);
@@ -797,7 +796,7 @@ void ShowHelpDialog(HWND hWnd) {
 	HelpStream << L"Pathfinder.exe is a program for creating grid-based maps and finding routes through them." << std::endl << std::endl;
 	HelpStream << L"START SCREEN:" << std::endl;
 	HelpStream << L"You can load a map from a file for editing, or create a new map on the new map screen. "
-		<< L"If the loaded map is already solved, the route will be cleared" << std::endl << std::endl;
+		<< L"If the loaded map is already solved, the route will be cleared." << std::endl << std::endl;
 	HelpStream << L"CREATE NEW MAP SCREEN:" << std::endl;
 	HelpStream << L"You can enter the width and height values for the map, between " << MinMapSize << L" and " << MaxMapSize << L" tiles."
 		<< L" Walls are automatically added outside the map space. If the width and height are not equal, the map edge size is the bigger of the two"
@@ -808,7 +807,8 @@ void ShowHelpDialog(HWND hWnd) {
 		<< L" Free spaces are in the points menu, and can be used to remove obstacle/start/end points, with the exception of walls. "
 		<< L"Free spaces are also toggleable. The start and end points are not toggleable and can only be placed once, unless the original is removed with a free space. "
 		<< L"The path can be found by clicking Run, but the algorithm will only run when both the start and end points are present. "
-		<< L"If no route can be found a notification appears. The algorithm is quick, but there may be a noticeable delay on large maps. The map is not editable after "
+		<< L"If no route can be found a notification appears. The algorithm is quick, but there may be a noticeable delay on large maps "
+		<< L"or maps with a lot of free space. The map is not editable after "
 		<< L"the algorithm has been run. If the map is saved after the algorithm is run, it will contain details of the route found.";
 	MessageBox(hWnd, HelpStream.str().c_str(), L"Help page", NULL);
 }
@@ -1030,11 +1030,13 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth, co
 	MapIsShowing = true;
 }
 
-void DisplayUserMap(HDC hdc, const pixel_array& px_arr, const int scale) {
+void DisplayUserMap(HDC hdc, const base_map& map_in, const int scale) {
 	if (scale < 1) {
 		MessageBox(NULL, L"DisplayUserMap error: scale factor <1", L"Error", MB_ICONERROR);
 		return;
 	}
+
+	pixel_array px_arr(map_in,int_to_px_translate);
 
 	//CREATE BITMAP OBJECT
 	HDC memDC = CreateCompatibleDC(NULL);
@@ -1056,6 +1058,11 @@ void DisplayUserMap(HDC hdc, const pixel_array& px_arr, const int scale) {
 			for (int row{ 0 }; row < scale; row++) {
 				for (int col{ 0 }; col < scale; col++) {
 					SetPixel(memDC, bmp_j + col, bmp_i + row, px_arr(px_i, px_j));
+					//add grid lines
+					if ((col == scale - 1 || row == scale - 1) 
+						&& map_in(px_i,px_j) != wall && map_in(px_i,px_j) != obstacle) {
+						SetPixel(memDC, bmp_j + col, bmp_i + row, color_grey);
+					}
 				}
 			}
 			//move to the next point in the px array

@@ -182,8 +182,9 @@ std::istream& operator>>(std::istream& is, base_map& map_in) {
 	std::string Tile;
 	std::string LineContents;
 	std::stringstream LineStream;
-	int i{ 0 };
+
 	//get each line and put into string stream (row iteration)
+	int i{ 0 };
 	while (std::getline(is, LineContents)) {
 		int j{ 0 };
 		LineStream << LineContents;
@@ -192,10 +193,6 @@ std::istream& operator>>(std::istream& is, base_map& map_in) {
 			//if in a wall position, check it is a wall
 			if ((i == 0 || i == map_in.get_rows() - 1 || j == 0 || j == map_in.get_cols() - 1) && (Tile != std::to_string(wall))) {
 				throw std::invalid_argument("Invalid walls");
-			}
-			//next, if not a wall position, check point is not a wall
-			else if ((i > 0 && i < map_in.get_rows() - 1 && j > 0 && j < map_in.get_cols() - 1) && (Tile == std::to_string(wall))) {
-				throw std::invalid_argument("Wall in editable map area");
 			}
 			//next, check if it is a start/end and whether there's already a start/end
 			else if ((Tile == std::to_string(start_point) && StartFound) || (Tile == std::to_string(end_point) && EndFound)) {

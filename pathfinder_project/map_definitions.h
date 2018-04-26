@@ -34,6 +34,9 @@
 #ifndef color_red
 #define color_red RGB(255,0,0)
 #endif
+#ifndef color_grey
+#define color_grey RGB(100,100,100)
+#endif
 
 //obstacle types integer values
 const enum map_point_type { free_space, obstacle, wall, start_point, end_point, path };
