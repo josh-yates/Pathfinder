@@ -2,6 +2,7 @@
 
 #define NOMINMAX		//handles the clash between windows.h min/max and limits min/max
 
+
 //INCLUDES
 #include <Windows.h>
 #include <iostream>
@@ -11,54 +12,17 @@
 #include <string>
 #include <limits>
 #include <cmath>
-#include <cwctype>
+#include "map_definitions.h"
 #include "base_map.h"
 #include "astar.h"
 #include "pixel_array.h"
 #include "derived_shapes.h"
+#include "program_definitions.h"
+#include "parentwindow.h"
 
-//CUSTOM MESSAGE DEFINITIONS
-#define START_SCREEN__OPEN 1
-#define START_SCREEN__NEW 2
-#define NEW_MAP_SCREEN_CREATE 3
-#define MAP_EDIT_SCREEN_EXIT 4
-#define MAP_EDIT_SCREEN_RESTART 5
-#define MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE 6
-#define MAP_EDIT_SCREEN_ADD_POINTS_START 7
-#define MAP_EDIT_SCREEN_ADD_POINTS_END 8
-#define MAP_EDIT_RUN_ALGORITHM 9
-#define MAP_EDIT_SCREEN_ADD_L_SHAPE 10
-#define MAP_EDIT_SCREEN_ADD_SMALL_SQUARE 11
-#define MAP_EDIT_SCREEN_ADD_FREE_SPACE 12
-#define MAP_EDIT_SCREEN_ADD_BIG_SQUARE 13
-#define	MAP_EDIT_SCREEN_ADD_V_LINE 14
-#define MAP_EDIT_SCREEN_ADD_H_LINE 15
-#define SHOW_HELP_PAGE 16
-#define FILE_WINDOW_OPEN 17
-#define FILE_WINDOW_SAVE 18
-#define FILE_WINDOW_CANCEL 19
-#define MAP_EDIT_SCREEN_SAVE 20
-#define MAP_OPENED_FROM_FILE 21
-
-//MAP RELATED VARIABLES
-const int MinMapSize{ 2 };
-const int MaxMapSize{ 50 };
-const int MaxBitmapSize{ 500 };
-
-//WINDOW HANDLES
-HWND hParentWindow;
-base_map UserMap(4, 4);
-
-//PARENT WINDOW VARIABLES
-int ParentHeight{ 200 };
-int ParentWidth{ 300 };
-std::vector<HWND*> ChildWindowPtrs;
-std::vector<HMENU*> MenuPtrs;
-bool MapIsShowing{ false };
-bool AlgorithmRun{ false };
 
 //FORWARD DECLARATIONS
-LRESULT CALLBACK ParentWindowProcedure(HWND, UINT, WPARAM, LPARAM);			//message handler
+//LRESULT CALLBACK ParentWindowProcedure(HWND, UINT, WPARAM, LPARAM);			//message handler
 void GetWindowSize(HWND, int&, int&);
 void DeleteParentWindowContents(HWND);
 bool CheckTextPosInt(HWND, const wchar_t*, const int, const int, int&);	//for checking text input is an integer
@@ -68,26 +32,9 @@ void ShowHelpDialog(HWND);
 bool SaveMapToFile(HWND, base_map&, std::wstring);
 bool OpenMapFromFile(HWND, base_map&, std::wstring);
 
-
 void DisplayMapEditScreen(HWND, const int, const int, const bool);		//screen shown when map is being edited
-HMENU hMapEditMenu;
-HWND hBitmapHolder;
-HWND hStatusBar;
-bool MapEditAddingFreeSpace{ false };
-bool MapEditAddingObstacle{ false };
-bool MapEditAddingStart{ false };
-bool MapEditAddingEnd{ false };
-bool MapEditAddingL_Shape{ false };
-bool MapEditAddingSmallSquare{ false };
-bool MapEditAddingBigSquare{ false };
-bool MapEditAddingVLine{ false };
-bool MapEditAddingHLine{ false };
 
 //BEGIN FILE DIALOG TEST
-
-//DIALOG WINDOW HANDLES
-HWND hFileWindow;
-HWND hFilePathInput;
 
 LRESULT CALLBACK FileWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp) {
 	switch (message) {
@@ -157,9 +104,6 @@ void DisplayFileWindow(HWND hWnd,std::wstring FunctionType) {
 	if (FunctionType != L"Open" && FunctionType != L"Save") {
 		throw "DisplayFileWindow: Invalid function type";
 	}
-	//FILE WINDOW VARIABLES
-	int FileHeight{ 200 };
-	int FileWidth{ 400 };
 
 	//CREATE THE WINDOW
 	hFileWindow = CreateWindowW(L"FileWindowClass", FunctionType.c_str(), WS_VISIBLE | WS_SYSMENU,
@@ -172,7 +116,7 @@ void DisplayFileWindow(HWND hWnd,std::wstring FunctionType) {
 	int InstructionYPos{ 10 };
 	std::wstringstream msg_stream;
 	msg_stream << L"Enter name to " << FunctionType << " the file. Specify path if not current directory.";
-	CreateWindowW(L"Static", msg_stream.str().c_str(), WS_VISIBLE | WS_CHILD | SS_CENTER,
+	hFileInstructions = CreateWindowW(L"Static", msg_stream.str().c_str(), WS_VISIBLE | WS_CHILD | SS_CENTER,
 		InstructionXPos, InstructionYPos, InstructionWidth, InstructionHeight, hFileWindow, NULL, NULL, NULL);
 
 	//ADD FILE PATH INPUT
@@ -199,27 +143,18 @@ void DisplayFileWindow(HWND hWnd,std::wstring FunctionType) {
 	int CancelButtonYPos{ PathInputYPos + PathInputHeight + 10 };
 	int FunctionButtonXPos{ (FileWidth / 2) + 10 };
 	int FunctionButtonYPos{ CancelButtonYPos };
-	CreateWindowW(L"Button", L"Cancel", WS_VISIBLE | WS_CHILD | SS_CENTER,
+	hFileCancelButton = CreateWindowW(L"Button", L"Cancel", WS_VISIBLE | WS_CHILD | SS_CENTER,
 		CancelButtonXPos, CancelButtonYPos, CancelButtonWidth, CancelButtonHeight, hFileWindow, (HMENU)FILE_WINDOW_CANCEL, NULL, NULL);
-	CreateWindowW(L"Button", FunctionType.c_str(), WS_VISIBLE | WS_CHILD | SS_CENTER,
+	hFileFunctionButton = CreateWindowW(L"Button", FunctionType.c_str(), WS_VISIBLE | WS_CHILD | SS_CENTER,
 		FunctionButtonXPos, FunctionButtonYPos, FunctionButtonWidth, FunctionButtonHeight, hFileWindow, (HMENU)ButtonFunction, NULL, NULL);
 }
 
 //END FILE DIALOG TEST
 
 void DisplayStartScreen(HWND);											//start screen, with a message and two buttons
-HWND hStartMessage;
-HWND hOpenButton;
-HWND hNewButton;
-HWND hHelpButton;
 
 void DisplayNewMapScreen(HWND);											//screen shown when new map is to be created
-HWND hNewMapInstructions;
-HWND hNewMapHeightLabel;
-HWND hNewMapHeightInput;
-HWND hNewMapWidthLabel;
-HWND hNewMapWidthInput;
-HWND hNewMapCreateButton;
+
 
 
 void DisplayUserMap(HDC, const base_map&, const int);				//function for displaying user map as bitmap on screen
@@ -292,9 +227,6 @@ LRESULT CALLBACK ParentWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARA
 			break;
 		case START_SCREEN__NEW:
 			DisplayNewMapScreen(hWnd);
-			break;
-		case MAP_OPENED_FROM_FILE:
-			DisplayMapEditScreen(hWnd, UserMap.get_rows(), UserMap.get_cols(), true);
 			break;
 		case NEW_MAP_SCREEN_CREATE: {
 			//check height and width inputs, and get integer values if correct

@@ -150,8 +150,11 @@
     <ClCompile Include="base_map.cpp" />
     <ClCompile Include="derived_shapes.cpp" />
     <ClCompile Include="generic_map_item.cpp" />
+    <ClCompile Include="map_definitions.cpp" />
     <ClCompile Include="map_shape.cpp" />
+    <ClCompile Include="parentwindow.cpp" />
     <ClCompile Include="pixel_array.cpp" />
+    <ClCompile Include="program_definitions.cpp" />
     <ClCompile Include="WinMain.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -162,7 +165,9 @@
     <ClInclude Include="generic_map_item.h" />
     <ClInclude Include="map_definitions.h" />
     <ClInclude Include="map_shape.h" />
+    <ClInclude Include="parentwindow.h" />
     <ClInclude Include="pixel_array.h" />
+    <ClInclude Include="program_definitions.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
