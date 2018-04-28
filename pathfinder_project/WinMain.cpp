@@ -32,6 +32,7 @@ LRESULT CALLBACK ParentWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARA
 	case WM_CREATE:
 		DisplayStartScreen(hWnd);
 		break;
+		return 0;
 	//COMMANDS FROM ITEMS IN WINDOW
 	case WM_COMMAND:
 		switch (wp) {
@@ -108,6 +109,7 @@ LRESULT CALLBACK ParentWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARA
 			InvalidateRect(hWnd, NULL, FALSE);
 		}
 		break;
+		return 0;
 	//WINDOW CLOSURE
 	case WM_DESTROY:
 		PostQuitMessage(0);
@@ -130,6 +132,7 @@ LRESULT CALLBACK ParentWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARA
 			EndPaint(hWnd, &ps);
 		}
 		break; 
+		return 0;
 	}
 	//LEFT MOUSE CLICK
 	case WM_LBUTTONDOWN: {
@@ -147,12 +150,14 @@ LRESULT CALLBACK ParentWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARA
 		//force repaint
 		InvalidateRect(hWnd, NULL, FALSE);
 		break;
+		return 0;
 	}
 	//DEFAULT PROCEDURE
 	default:
 		return DefWindowProcW(hWnd, message, wp, lp);
 		break;
 	}
+	return 0;
 }
 
 LRESULT CALLBACK FileWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARAM lp) {
@@ -160,11 +165,13 @@ LRESULT CALLBACK FileWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARAM 
 	case WM_CREATE:
 		EnableWindow(hParentWindow, false);
 		break;
+		return 0;
 	case WM_CLOSE:
 		EnableWindow(hParentWindow, true);
 		DestroyWindow(hWnd);
 		BringWindowToTop(hParentWindow);
 		break;
+		return 0;
 	case WM_COMMAND:
 		switch (wp) {
 		case FILE_WINDOW_CANCEL:
@@ -197,8 +204,10 @@ LRESULT CALLBACK FileWindowProcedure(HWND hWnd, UINT message, WPARAM wp, LPARAM 
 		}
 		}
 		break;
+		return 0;
 	default:
 		return DefWindowProcW(hWnd, message, wp, lp);
 		break;
 	}
+	return 0;
 }
