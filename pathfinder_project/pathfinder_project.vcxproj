@@ -149,6 +149,7 @@
     <ClCompile Include="astar.cpp" />
     <ClCompile Include="base_map.cpp" />
     <ClCompile Include="derived_shapes.cpp" />
+    <ClCompile Include="filewindow.cpp" />
     <ClCompile Include="generic_map_item.cpp" />
     <ClCompile Include="map_definitions.cpp" />
     <ClCompile Include="map_shape.cpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="astar.h" />
     <ClInclude Include="base_map.h" />
     <ClInclude Include="derived_shapes.h" />
+    <ClInclude Include="filewindow.h" />
     <ClInclude Include="generic_map_item.h" />
     <ClInclude Include="map_definitions.h" />
     <ClInclude Include="map_shape.h" />

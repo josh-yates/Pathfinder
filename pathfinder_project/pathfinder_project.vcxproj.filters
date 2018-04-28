@@ -45,6 +45,9 @@
     <ClCompile Include="parentwindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="filewindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="array2D.h">
@@ -71,10 +74,13 @@
     <ClInclude Include="derived_shapes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="program_definitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="parentwindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="program_definitions.h">
+    <ClInclude Include="filewindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

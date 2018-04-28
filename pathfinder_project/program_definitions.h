@@ -1,9 +1,15 @@
-#ifndef WINDOW_DEFINITIONS_INCLUDED
-#define WINDOW_DEFINITIONS_INCLUDED
+#ifndef PROGRAM_DEFINITIONS_INCLUDED
+#define PROGRAM_DEFINITIONS_INCLUDED
+
+#define NOMINMAX	//handles the clash between windows.h min/max and limits min/max
+
+//VARIABLES AND FUNCTIONS USED BY THE MAIN PROGRAM
 
 #include <Windows.h>
 #include <vector>
+#include <fstream>
 #include "base_map.h"
+
 
 //CUSTOM MESSAGE DEFINITIONS
 #define START_SCREEN__OPEN 1
@@ -27,6 +33,8 @@
 #define FILE_WINDOW_CANCEL 19
 #define MAP_EDIT_SCREEN_SAVE 20
 #define MAP_OPENED_FROM_FILE 21
+
+//-----VARIABLES-----
 
 //MAP RELATED VARIABLES
 extern const int MinMapSize;		//ranges for size of UserMap
@@ -82,5 +90,12 @@ extern HWND hNewMapHeightInput;
 extern HWND hNewMapWidthLabel;
 extern HWND hNewMapWidthInput;
 extern HWND hNewMapCreateButton;
+
+//-----FUNCTIONS-----
+void FalseAllMapEdits();														//disables all the edit trackers
+bool CheckTextPosInt(HWND, const std::wstring, const int, const int, int&);		//check text input is a positive integer in a range
+int CalculateScale(const int, const int);										//calculate scale up factor for map->bitmap
+bool SaveMapToFile(HWND, base_map&, std::wstring);								//save map to text file
+bool OpenMapFromFile(HWND, base_map&, std::wstring);							//read map from text file, with checks
 
 #endif
