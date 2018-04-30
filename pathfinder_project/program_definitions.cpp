@@ -181,8 +181,13 @@ bool OpenMapFromFile(HWND hWnd, base_map& map_in, std::wstring file_path) {
 	try {
 		file_stream >> map_in;
 		file_stream.close();
+		//check rows = cols, else map was edited
+		if (map_in.get_cols() != map_in.get_rows()) {
+			MessageBox(hWnd, L"Invalid map file", L"Error", MB_ICONERROR);
+			return false;
+		}
 		//check if map is too big/small
-		if (map_in.get_rows() - 2 > MaxMapSize || map_in.get_cols() - 2 > MaxMapSize) {
+		else if (map_in.get_rows() - 2 > MaxMapSize || map_in.get_cols() - 2 > MaxMapSize) {
 			MessageBox(hWnd, L"Map too large", L"Error", MB_ICONERROR);
 			return false;
 		}
