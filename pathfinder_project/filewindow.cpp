@@ -34,6 +34,12 @@ void DisplayFileWindow(HWND hWnd, std::wstring FunctionType) {
 	int InstructionYPos{ 10 };
 	std::wstringstream msg_stream;
 	msg_stream << L"Enter name to " << FunctionType << " the file. Specify path if not current directory.";
+	if (FunctionType == L"Open") {
+		msg_stream << std::endl << L"Include .txt extension.";
+	}
+	else if (FunctionType == L"Save") {
+		msg_stream << std::endl << L".txt files are used for saving maps";
+	}
 	hFileInstructions = CreateWindowW(L"Static", msg_stream.str().c_str(), WS_VISIBLE | WS_CHILD | SS_CENTER,
 		InstructionXPos, InstructionYPos, InstructionWidth, InstructionHeight, hFileWindow, NULL, NULL, NULL);
 
