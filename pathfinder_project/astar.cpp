@@ -4,16 +4,16 @@
 astar::node::node(const int i_in, const int j_in, base_map& map_in, node* prev_in) {
 	//check dimensions are in map
 	if (j_in < 0 || j_in >= map_in.get_cols() || i_in < 0 || j_in >= map_in.get_rows()) {
-		throw "node constructor: coordinates outside map dimensions";
+		throw std::invalid_argument("node constructor: coordinates outside map dimensions");
 	}
 	//check coordinates are not a wall or obstacle
 	if (map_in(i_in, j_in) == wall || map_in(i_in, j_in) == obstacle) {
-		throw "node constructor: node cannot be on obstacle/wall";
+		throw std::invalid_argument("node constructor: node cannot be on obstacle/wall");
 	}
 	//check if it is the start point, if so it must be nullptr
 	map_in.find_start_end();
 	if ((i_in == map_in.get_start_i() && j_in == map_in.get_start_j()) && prev_in != nullptr) {
-		throw "node constructor: start node must have nullptr previous";
+		throw std::invalid_argument("node constructor: start node must have nullptr previous");
 	}
 	//set variables
 	i_pos = i_in;
@@ -95,10 +95,6 @@ std::vector<std::unique_ptr<astar::node>> astar::node::expand_node()const {
 	return surrounding_nodes;
 }
 
-
-
-
-
 //ASTAR FUNCTIONS
 astar::astar(base_map& map_in) {
 	map_to_search = &map_in;
@@ -110,15 +106,16 @@ astar::astar(base_map& map_in) {
 	int end_i{ map_to_search->get_end_i() };
 	int end_j{ map_to_search->get_end_j() };
 	if (start_i < 0 || start_j < 0 || end_i < 0 || end_j < 0) {
-		throw "astar constructor: map not valid";
+		throw std::invalid_argument("astar constructor: map not valid");
 	}
 	//calculate the id's of start and end nodes
 	startID = (start_i*map_to_search->get_cols()) + start_j;
 	endID = (end_i*map_to_search->get_cols()) + end_j;
 	//create a unique pointer to the start node and push to open queue
-	open_queue.push_back(std::move(std::unique_ptr<node>(new node(start_i, start_j, map_in, nullptr))));
+	open_queue.push_back(std::move(std::unique_ptr<node>(
+		new node(start_i, start_j, map_in, nullptr))));
 }
-astar::~astar() {/*No deletion needed!*/ }
+astar::~astar() {/*No deletion needed*/ }
 
 void astar::expand_top() {
 	//clear the nullptr's out of found_nodes

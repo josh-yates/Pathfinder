@@ -3,19 +3,20 @@
 
 #include <memory>
 #include <vector>
+#include <stdexcept>
 #include <algorithm>
 #include "base_map.h"
 
 class astar {
 private:
-	//node nested class
+	//NODE NESTED CLASS
 	class node {
 	private:
 		//position in the map and the node's unique id# - calculated by its position in the map
 		int i_pos, j_pos, node_id;
 		//distance to end node from node's position
 		double dist_to_end;
-		//pointer to the parent node
+		//pointer to the previous node
 		node* prev_node{ nullptr };
 		//pointer to the parent map
 		base_map* parent_map;
@@ -32,20 +33,20 @@ private:
 		double get_dist_to_end()const;
 		//SETTERS
 		void setPrevNode(node*);
-		//EXPAND - for finding surrounding nodes
+		//EXPAND NODE - for finding surrounding nodes
 		std::vector<std::unique_ptr<node>> expand_node()const;
 	};
 
-	//pointer to the search map
+	//pointer to the parent map being searched
 	base_map* map_to_search;
 	//ID# of start and end nodes
 	int startID, endID;
-	//vector for queues and all existing nodes
+	//vectors for queues and the nodes found during expansion
 	std::vector<std::unique_ptr<node>> open_queue;
 	std::vector<std::unique_ptr<node>> closed_queue;
 	std::vector<std::unique_ptr<node>> found_nodes;
 
-	//PRIVATE FUNCTIONS
+	//PRIVATE FUNCTIONS - only callable by find_path
 	void expand_top();
 	//insert found nodes into the open queue
 	void found_to_open();
@@ -55,7 +56,6 @@ public:
 	//CONSTRUCTORS/DESTRUCTORS
 	astar(base_map&);
 	~astar();
-	//MAIN CALL
 	//MAIN ALGORITHM CALL
 	std::vector<std::vector<int>> find_path();
 };

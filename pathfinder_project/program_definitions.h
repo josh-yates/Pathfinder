@@ -8,10 +8,10 @@
 #include <Windows.h>
 #include <vector>
 #include <fstream>
+#include <limits>
 #include "base_map.h"
 
-
-//CUSTOM MESSAGE DEFINITIONS
+//CUSTOM MESSAGE DEFINITIONS - WM_COMMAND
 #define START_SCREEN__OPEN 1
 #define START_SCREEN__NEW 2
 #define NEW_MAP_SCREEN_CREATE 3

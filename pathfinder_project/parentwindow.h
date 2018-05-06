@@ -1,4 +1,4 @@
-//declaration of the parent window functions
+//declaration of the parent window related functions
 
 #ifndef PARENTWINDOW_INCLUDED
 #define PARENTWINDOW_INCLUDED

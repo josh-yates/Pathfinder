@@ -18,7 +18,7 @@ base_map::base_map(const int height, const int width) {
 	start_j = -1;
 	end_i = -1;
 	end_j = -1;
-	//set the separator for use in input/output
+	//set the separator between map_point_types for use in input/output
 	separator = ' ';
 }
 base_map::~base_map() {}
@@ -46,11 +46,10 @@ map_point_type base_map::operator()(const int i, const int j)const {
 }
 //SETTERS
 void base_map::set_coord(const int i, const int j, const map_point_type point) {
-	//TODO could add checking for end/start/walls etc
 	generic_map_item::set_coord(i, j, point);
 }
 
-//SHAPE ADD
+//SHAPE ADD - POLYMORPHIC
 void base_map::add_shape(map_shape* shape_in) {
 	find_start_end();
 	/*iterate over the shape, checking whether any of the shape's non-free space points are start/end
@@ -118,7 +117,7 @@ void base_map::find_start_end() {
 				start_found = true;
 			}
 			else if (coordinates(i, j) == start_point && start_found == true) {
-				throw "base_map start_find_end: two start points found";
+				throw std::invalid_argument("base_map start_find_end: two start points found");
 			}
 			//finding end points
 			if (coordinates(i, j) == end_point && end_found == false) {
@@ -127,7 +126,7 @@ void base_map::find_start_end() {
 				end_found = true;
 			}
 			else if (coordinates(i, j) == end_point && end_found == true) {
-				throw "base_map start_find_end: two end points found";
+				throw std::invalid_argument("base_map start_find_end: two end points found");
 			}
 		}
 	}

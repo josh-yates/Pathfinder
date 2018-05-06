@@ -5,6 +5,7 @@
 #include "array2D.h"
 #include <windows.h>
 #include <map>
+#include <stdexcept>
 #include "base_map.h"
 
 #ifndef default_color

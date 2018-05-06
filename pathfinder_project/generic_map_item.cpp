@@ -18,7 +18,7 @@ map_point_type generic_map_item::operator()(const int i, const int j)const {
 void generic_map_item::set_coord(const int i, const int j, const map_point_type point) {
 	//range checking
 	if (i < 0 || i >= coordinates.get_m_rows() || j < 0 || j >= coordinates.get_n_cols()) {
-		throw "map_item set_coord: element out of array range";
+		throw std::invalid_argument("map_item set_coord: element out of array range");
 	}
 	else {
 		coordinates.set_element(i, j, point);

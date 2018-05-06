@@ -1,4 +1,4 @@
-//class header for 2d array of integers or doubles (TYPE)
+//class header for 2d array TYPE
 #ifndef ARRAY2D_INCLUDED
 #define ARRAY2D_INCLUDED
 
@@ -13,7 +13,7 @@ public:
 	//parametised
 	array2D(const int m_in, const int n_in, const TYPE starting_val) {
 		if (m_in < 1 || n_in < 1) {
-			throw "array2D constructor: Invalid size";
+			throw std::invalid_argument("array2D constructor: Invalid size");
 		}
 		//if passed range check, set all elements to 0
 		m_rows = m_in;
@@ -64,11 +64,11 @@ public:
 	//set array element to TYPE using i,j
 	void set_element(const int, const int, TYPE);
 	//ASSIGNMENT OPERATORS
-	array2D<TYPE>& operator=(const array2D<TYPE>&);
-	array2D<TYPE>& operator=(array2D<TYPE>&&);
+	array2D<TYPE>& operator=(const array2D<TYPE>&);	//copy
+	array2D<TYPE>& operator=(array2D<TYPE>&&);		//move
 };
 
-//FUNCTION IMPLEMENTATION
+//FUNCTION DEFINITIONS
 
 //GETTERS
 //get array dimensions
@@ -81,7 +81,7 @@ template<class TYPE> int array2D<TYPE>::get_n_cols()const {
 //get array element using (i,j)
 template<class TYPE> TYPE array2D<TYPE>::operator()(const int i, const int j)const {
 	if (i < 0 || i >= m_rows || j < 0 || j >= n_cols) {
-		throw "array2D operator (): element out of array range";
+		throw std::invalid_argument("array2D operator (): element out of array range");
 	}
 	//ith row down, jth column across
 	return array_contents[(i*n_cols) + j];
@@ -90,13 +90,13 @@ template<class TYPE> TYPE array2D<TYPE>::operator()(const int i, const int j)con
 //set array element to TYPE using i,j
 template<class TYPE> void array2D<TYPE>::set_element(const int i, const int j, TYPE val) {
 	if (i < 0 || i >= m_rows || j < 0 || j >= n_cols) {
-		throw "array2D set_element: element out of array range";
+		throw std::invalid_argument("array2D set_element: element out of array range");
 	}
 	array_contents[(i*n_cols) + j] = val;
 }
 //ASSIGNMENT OPERATORS
 template<class TYPE> array2D<TYPE>& array2D<TYPE>::operator=(const array2D<TYPE>& arr_in) {
-	//self-assignment
+	//handle self-assignment
 	if (&arr_in == this) {
 		return *this;
 	}

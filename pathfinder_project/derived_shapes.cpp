@@ -13,6 +13,7 @@ L_shape::L_shape(base_map& map_in, const int anchor_i_in, const int anchor_j_in)
 }
 L_shape::~L_shape(){}
 
+//the rest of the shapes can be directly constructed as an array of obstacle points (don't contain any free spaces)
 small_square::small_square(base_map& map_in, const int anchor_i_in, const int anchor_j_in) :map_shape(map_in, anchor_i_in, anchor_j_in) {
 	coordinates = std::move(array2D<map_point_type>(2, 2, obstacle));
 }

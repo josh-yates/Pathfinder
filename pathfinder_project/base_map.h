@@ -1,6 +1,5 @@
-//class for the base map that everything will be added to
-//TODO add function for finding the start and end coordinates
-//TODO add combination function for adding shapes, make this check for walls etc.
+//class for the base map that will be edited by the user
+
 #ifndef BASE_MAP_INCLUDED
 #define BASE_MAP_INCLUDED
 
@@ -12,6 +11,7 @@
 #include <stdexcept>
 #include <sstream>
 
+//make base_map aware of map_shape's existence
 class map_shape;
 
 class base_map : public generic_map_item {

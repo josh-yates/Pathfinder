@@ -1,6 +1,5 @@
 //definitions of map values
 
-//TODO come up with suitable scales for map->pixels
 #ifndef DEFINITIONS_INCLUDED
 #define DEFINITIONS_INCLUDED
 
@@ -10,6 +9,7 @@
 #include <string>
 
 /*
+ENUM AND PIXEL MEANINGS
 0 - free space (white)
 1 - obstacle (black)
 2 - wall (black)

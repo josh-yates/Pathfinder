@@ -4,7 +4,7 @@
 map_shape::map_shape(base_map& map_in, const int anchor_i_in, const int anchor_j_in):anchor_i(anchor_i_in), anchor_j(anchor_j_in) {
 	//range check inputs of anchor points
 	if (anchor_i_in < 0 || anchor_i_in >= map_in.get_rows() || anchor_j_in < 0 || anchor_j_in >= map_in.get_cols()) {
-		throw "map_shape constructor: anchor points out of range";
+		throw std::invalid_argument("map_shape constructor: anchor points out of range");
 	}
 }
 map_shape::~map_shape(){}

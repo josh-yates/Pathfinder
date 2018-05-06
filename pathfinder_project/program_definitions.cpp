@@ -106,6 +106,7 @@ bool CheckTextPosInt(HWND hWnd, const std::wstring input_string, const int min_v
 		return false;
 	}
 	else {
+		//split double into the integer part and decimal part
 		double int_part, fract_part;
 		fract_part = modf(input_double, &int_part);
 		if (fract_part == 0) {
@@ -121,6 +122,7 @@ bool CheckTextPosInt(HWND hWnd, const std::wstring input_string, const int min_v
 }
 
 int CalculateScale(const int int_in, const int max_size) {
+	//divide the maximum size by the current size and round
 	double double_scale{ static_cast<double>(max_size) / static_cast<double>(int_in) };
 	double rounded_double{ round(double_scale) };
 	return static_cast<int>(rounded_double);

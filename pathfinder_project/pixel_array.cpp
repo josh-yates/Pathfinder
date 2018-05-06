@@ -8,7 +8,7 @@ pixel_array::pixel_array(const base_map& map_in, const std::map<int, COLORREF> t
 			//check ij'th element exists in translation_key
 			const auto translation_iter = translation_key.find(map_in(i, j));
 			if (translation_iter == translation_key.end()) {
-				throw "pixel_array constructor: unable to translate from int";
+				throw std::invalid_argument("pixel_array constructor: unable to translate from int");
 			}
 			else {
 				pixel_data.set_element(i, j, translation_iter->second);

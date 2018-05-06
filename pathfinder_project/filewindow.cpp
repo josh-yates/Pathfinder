@@ -20,7 +20,7 @@ void RegisterFileWindow(HINSTANCE hInst) {
 void DisplayFileWindow(HWND hWnd, std::wstring FunctionType) {
 	//CHECK FUNCTIONTYPE
 	if (FunctionType != L"Open" && FunctionType != L"Save") {
-		throw "DisplayFileWindow: Invalid function type";
+		throw std::invalid_argument("DisplayFileWindow: Invalid function type");
 	}
 
 	//CREATE THE WINDOW
@@ -52,12 +52,12 @@ void DisplayFileWindow(HWND hWnd, std::wstring FunctionType) {
 		PathInputXPos, PathInputYPos, PathInputWidth, PathInputHeight, hFileWindow, NULL, NULL, NULL);
 
 	//ADD OPEN/SAVE AND CANCEL BUTTONS
-	int ButtonFunction;
+	int FunctionButtonMessage;		//message for the function (open/save) button
 	if (FunctionType == L"Open") {
-		ButtonFunction = FILE_WINDOW_OPEN;
+		FunctionButtonMessage = FILE_WINDOW_OPEN;
 	}
 	else {
-		ButtonFunction = FILE_WINDOW_SAVE;
+		FunctionButtonMessage = FILE_WINDOW_SAVE;
 	}
 	int CancelButtonWidth{ 100 };
 	int CancelButtonHeight{ 30 };
@@ -70,5 +70,5 @@ void DisplayFileWindow(HWND hWnd, std::wstring FunctionType) {
 	hFileCancelButton = CreateWindowW(L"Button", L"Cancel", WS_VISIBLE | WS_CHILD | SS_CENTER,
 		CancelButtonXPos, CancelButtonYPos, CancelButtonWidth, CancelButtonHeight, hFileWindow, (HMENU)FILE_WINDOW_CANCEL, NULL, NULL);
 	hFileFunctionButton = CreateWindowW(L"Button", FunctionType.c_str(), WS_VISIBLE | WS_CHILD | SS_CENTER,
-		FunctionButtonXPos, FunctionButtonYPos, FunctionButtonWidth, FunctionButtonHeight, hFileWindow, (HMENU)ButtonFunction, NULL, NULL);
+		FunctionButtonXPos, FunctionButtonYPos, FunctionButtonWidth, FunctionButtonHeight, hFileWindow, (HMENU)FunctionButtonMessage, NULL, NULL);
 }

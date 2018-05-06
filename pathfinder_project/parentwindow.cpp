@@ -50,26 +50,29 @@ void DeleteParentWindowContents(HWND hWnd) {
 }
 
 void ShowHelpDialog(HWND hWnd) {
-	//create help/instruction message
+	//create help/instruction message and display in popup message box
 	std::wstringstream HelpStream;
+
 	HelpStream << L"PATHFINDER HELP PAGE" << std::endl << std::endl;
 	HelpStream << L"Pathfinder.exe is a program for creating grid-based maps and finding routes through them." << std::endl << std::endl;
-	HelpStream << L"START SCREEN:" << std::endl;
-	HelpStream << L"You can load a map from a file for editing, or create a new map on the new map screen. "
-		<< L"If the loaded map is already solved, the route will be cleared." << std::endl << std::endl;
-	HelpStream << L"CREATE NEW MAP SCREEN:" << std::endl;
-	HelpStream << L"You can enter the width and height values for the map, between " << MinMapSize << L" and " << MaxMapSize << L" tiles."
+	HelpStream << L"CREATING A NEW MAP" << std::endl;
+	HelpStream << L"Click \"Create new map\" to make a new map. Enter height and width values between " << MinMapSize << L" and " << MaxMapSize << L" tiles."
 		<< L" Walls are automatically added outside the map space. If the width and height are not equal, the map edge size is the bigger of the two"
 		<< L" and walls are added to reach the desired dimensions." << std::endl << std::endl;
-	HelpStream << L"MAP EDIT SCREEN:" << std::endl;
-	HelpStream << L"Here you can add obstacles and the start and end points to create your map. The controls for all obstacles (point, line shape) are toggleable, "
-		<< L"so you can use the same obstacle multiple times without needing to revisit the menu. Switching to another obstacle will toggle-off the previous one. "
-		<< L" Free spaces are in the points menu, and can be used to remove obstacle/start/end points, with the exception of walls. "
-		<< L"Free spaces are also toggleable. The start and end points are not toggleable and can only be placed once, unless the original is removed with a free space. "
-		<< L"The path can be found by clicking Run, but the algorithm will only run when both the start and end points are present. "
-		<< L"If no route can be found a notification appears. The algorithm is quick, but there may be a noticeable delay on large maps "
-		<< L"or maps with a lot of free space. The map is not editable after "
-		<< L"the algorithm has been run. If the map is saved after the algorithm is run, it will contain details of the route found.";
+	HelpStream << L"OPENING A MAP FROM A FILE" << std::endl;
+	HelpStream << L"Click \"Open from file\" to open a map from a text file. The .txt extension must be included, along with the path if the file is in a different directory."
+		<< L" If the map in the file is already solved, the route will be cleared before it is shown on the screen, allowing editing of the map." << std::endl << std::endl;
+	HelpStream << L"EDITING THE MAP" << std::endl;
+	HelpStream << L"Use the \"Insert\" menu to add start (green) and end (red) points, free space (white) points and obstacle (black) points, lines and shapes. Everything except for the "
+		<< L"start and end points are toggleable, so you can reuse the same item without needing to visit the menu each time. Only one pair of start and end points may"
+		<< L" be present on the map. To change their position, remove them using the free space point and place them again. The external walls (black) are not removable." << std::endl << std::endl;
+	HelpStream << L"RUNNING THE ALGORITHM" << std::endl;
+	HelpStream << L"Click \"Run\" on the menu to run the pathfinding algorithm. It will only run if both the start and end points are present. There may be a noticeable delay"
+		<< L" if the map is large or has lots of free space. The route, if found, will be shown in blue. The path will only include non-diagonal movements between adjacent tiles."
+		<< L" The map is not editable once the algorithm has been run, but can be edited via saving and re-opening." << std::endl << std::endl;
+	HelpStream << L"SAVING A MAP TO A FILE" << std::endl;
+	HelpStream << L"Click \"Save\" in the \"File\" menu to save a map at any point. The maps are saved as text files, "
+		<< L"but the .txt extension is automatically added if not specified in the save file name.";
 	MessageBox(hWnd, HelpStream.str().c_str(), L"Help page", NULL);
 }
 
@@ -83,7 +86,7 @@ void DisplayStartScreen(HWND hWnd) {
 	//START MESSAGE
 	int StartMessageWidth{ 180 };
 	int StartMessageHeight{ 40 };
-	int StartMessageXPos{ (ParentWidth - StartMessageWidth) / 2 };
+	int StartMessageXPos{ (ParentWidth - StartMessageWidth) / 2 };	//center the message
 	int StartMessageYpos{ 10 };
 	hStartMessage = CreateWindowW(L"Static", L"Welcome to Pathfinder.exe\nChoose an option:", WS_VISIBLE | WS_CHILD | SS_CENTER,
 		StartMessageXPos, StartMessageYpos, StartMessageWidth, StartMessageHeight, hWnd, NULL, NULL, NULL);
@@ -116,7 +119,7 @@ void DisplayStartScreen(HWND hWnd) {
 	hHelpButton = CreateWindowW(L"Button", L"Instructions", WS_VISIBLE | WS_CHILD | SS_CENTER,
 		HelpButtonXPos, HelpButtonYPos, HelpButtonWidth, HelpButtonHeight, hWnd, (HMENU)SHOW_HELP_PAGE, NULL, NULL);
 
-	//TODO add messages for the two buttons
+	//store pointers to the child windows shown on the screen
 	ChildWindowPtrs.push_back(&hStartMessage);
 	ChildWindowPtrs.push_back(&hOpenButton);
 	ChildWindowPtrs.push_back(&hNewButton);
@@ -135,7 +138,7 @@ void DisplayNewMapScreen(HWND hWnd) {
 	int InstructionsHeight{ 50 };
 	int InstructionsXPos{ (ParentWidth - InstructionsWidth) / 2 };
 	int InstructionsYPos{ 10 };
-	hNewMapInstructions = CreateWindowW(L"Static", L"Insert width and height\n for the new map:", WS_VISIBLE | WS_CHILD | SS_CENTER,
+	hNewMapInstructions = CreateWindowW(L"Static", L"Input width and height\n for the new map:", WS_VISIBLE | WS_CHILD | SS_CENTER,
 		InstructionsXPos, InstructionsYPos, InstructionsWidth, InstructionsHeight, hWnd, NULL, NULL, NULL);
 
 	//WIDTH INPUT BOX AND LABEL
@@ -174,8 +177,6 @@ void DisplayNewMapScreen(HWND hWnd) {
 	hNewMapCreateButton = CreateWindowW(L"Button", L"Create", WS_VISIBLE | WS_CHILD | SS_CENTER,
 		CreateButtonXPos, CreateButtonYPos, CreateButtonWidth, CreateButtonHeight, hWnd, (HMENU)NEW_MAP_SCREEN_CREATE, NULL, NULL);
 
-	//TODO add message for create button
-
 	ChildWindowPtrs.push_back(&hNewMapInstructions);
 	ChildWindowPtrs.push_back(&hNewMapWidthLabel);
 	ChildWindowPtrs.push_back(&hNewMapWidthInput);
@@ -200,52 +201,56 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth, co
 	DeleteParentWindowContents(hWnd);
 
 	//ADD MAIN MENU
-	hMapEditMenu = CreateMenu();
+	hMapEditMenu = CreateMenu(); //main menu bar
 
 	//ADD FILE MENU
-	//TODO add messages for menu buttons
+	//build the file dropdown
 	HMENU hFileMenu{ CreateMenu() };
 	AppendMenu(hFileMenu, MF_STRING, MAP_EDIT_SCREEN_RESTART, L"Restart");
 	AppendMenu(hFileMenu, MF_STRING, MAP_EDIT_SCREEN_SAVE, L"Save Map");
-	AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);
+	AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);	//separator line before exit
 	AppendMenu(hFileMenu, MF_STRING, MAP_EDIT_SCREEN_EXIT, L"Exit");
 
+	//add file dropdown to menu bar
 	AppendMenu(hMapEditMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"File");
 
-	//ADD SHAPES MENU
+	//ADD SHAPES MENU (SUBMENU OF INSERT)
 	HMENU hShapesMenu{ CreateMenu() };
 	AppendMenu(hShapesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_SMALL_SQUARE, L"Small square");
 	AppendMenu(hShapesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_BIG_SQUARE, L"Big square");
 	AppendMenu(hShapesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_L_SHAPE, L"L shape");
 
-	//ADD POINTS MENU
+	//ADD POINTS MENU (SUBMENU OF INSERT)
 	HMENU hPointsMenu{ CreateMenu() };
 	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS_START, L"Start");
 	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS_END, L"End");
 	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_FREE_SPACE, L"Free space");
 	AppendMenu(hPointsMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_POINTS_OBSTACLE, L"Obstacle");
 
-	//ADD LINES MENU
+	//ADD LINES MENU (SUBMENU OF INSERT)
 	HMENU hLinesMenu{ CreateMenu() };
 	AppendMenu(hLinesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_V_LINE, L"Vertical");
 	AppendMenu(hLinesMenu, MF_STRING, MAP_EDIT_SCREEN_ADD_H_LINE, L"Horizontal");
 
 	//ADD INSERT MENU
+	//build insert dropdown from the submenus
 	HMENU hInsertMenu{ CreateMenu() };
 	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hPointsMenu, L"Points");
 	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hLinesMenu, L"Lines");
 	AppendMenu(hInsertMenu, MF_POPUP, (UINT_PTR)hShapesMenu, L"Shapes");
 
+	//add insert menu to menu bar
 	AppendMenu(hMapEditMenu, MF_POPUP, (UINT_PTR)hInsertMenu, L"Insert");
 
 	//ADD RUN MENU FOR ALGORITHM
 	AppendMenu(hMapEditMenu, MF_STRING, MAP_EDIT_RUN_ALGORITHM, L"Run");
 
-	//ADD HELP MENU
+	//ADD HELP MENU (OPENS HELP POPUP MESSAGE BOX)
 	AppendMenu(hMapEditMenu, MF_STRING, SHOW_HELP_PAGE, L"Help");
 
+	//PIN THE MAIN MENU TO THE WINDOW
 	SetMenu(hWnd, hMapEditMenu);
-	MenuPtrs.push_back(&hMapEditMenu);
+	MenuPtrs.push_back(&hMapEditMenu);	//store pointer to menu being displayed
 
 	//MAP AND BITMAP - SUBWINDOW TO HOLD BITMAP
 	int Scale{ CalculateScale(BmpSideSize, MaxBitmapSize) };
@@ -259,7 +264,7 @@ void DisplayMapEditScreen(HWND hWnd, const int MapHeight, const int MapWidth, co
 		BitmapXPos, BitmapYPos, BitmapWidth, BitmapHeight, hWnd, NULL, NULL, NULL);
 	ChildWindowPtrs.push_back(&hBitmapHolder);
 
-	//RESIZE PARENT WINDOW
+	//RESIZE PARENT WINDOW TO FIT AROUND BITMAP HOLDER
 	ParentHeight = BitmapHeight + 60;
 	ParentWidth = BitmapWidth + 15;
 	SetWindowPos(hWnd, NULL, NULL, NULL, ParentWidth, ParentHeight, SWP_NOMOVE);
@@ -294,6 +299,7 @@ void DisplayUserMap(HDC hdc, const base_map& map_in, const int scale) {
 		return;
 	}
 
+	//get pixel colours from base map
 	pixel_array px_arr(map_in, int_to_px_translate);
 
 	//CREATE BITMAP OBJECT
@@ -560,7 +566,7 @@ void MouseClickPlaceShape(const int MapXClick, const int MapYClick) {
 		}
 		//SHAPE/LINE HANDLERS
 		else if (MapEditAddingL_Shape || MapEditAddingSmallSquare || MapEditAddingBigSquare || MapEditAddingHLine || MapEditAddingVLine) {
-			//depending on shape/line type (lines are shapes), add that shape to the map
+			//depending on shape/line type (lines are shapes), add that shape to the map and keep toggles on
 			if (MapEditAddingL_Shape) {
 				FalseAllMapEdits();
 				MapEditAddingL_Shape = true;

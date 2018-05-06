@@ -3,9 +3,11 @@
 #ifndef MAP_SHAPE_INCLUDED
 #define MAP_SHAPE_INCLUDED
 
+#include <stdexcept>
 #include "generic_map_item.h"
 #include "base_map.h"
 
+//make map_shape aware of base_map's existence
 class base_map;
 
 class map_shape :public generic_map_item {
