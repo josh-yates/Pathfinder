@@ -6,6 +6,8 @@
   editing and re-solving.
 */
 
+/*IMPORTANT: PROJECT MUST BE BUILT AS A WIN32 PROJECT, NOT A CONSOLE APPLICATION*/
+
 //INCLUDES
 #include <Windows.h>
 #include <string>
@@ -13,10 +15,9 @@
 #include "parentwindow.h"
 #include "filewindow.h"
 
-//MAIN PROGRAM (API EQUIVALENt OF INT MAIN)
+//MAIN PROGRAM (API EQUIVALENT OF INT MAIN)
 int CALLBACK WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR args, int ncmdshow) {
 	try {
-		
 		//REGISTER WINDOW CLASSES
 		RegisterParentWindow(hInst);			//register window classes with OS and show the main/parent window
 		RegisterFileWindow(hInst);
